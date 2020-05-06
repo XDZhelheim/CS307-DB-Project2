@@ -130,5 +130,36 @@ public class User {
 		conn.close();
 		System.exit(0);
 	}
+	
+	//--------------------------------------------------------------------------------------------------------------
+	
+	public void queryTrain(String start, String arrive) throws SQLException {
+		String sql="select t1.train_num as id, t1.station_name as from, t2.station_name as to, t1.depart_time as dt, t2.arrive_time as at, t1.train_type as ty"
+				+ " from (select * from train where station_name like ?) as t1 join (select * from train where station_name like ?) as t2 on t1.train_num=t2.train_num;";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		stmt.setString(1, "%"+start+"%");
+		stmt.setString(2, "%"+arrive+"%");
+		ResultSet rs=stmt.executeQuery();
+		String id=null, from=null, to=null, dt=null, at=null, ty=null;
+		ArrayList<TrainQuery> resultlist=new ArrayList<>();
+		while (rs.next()) {
+			id=rs.getString("id");
+			from=rs.getString("from");
+			to=rs.getString("to");
+			dt=rs.getString("dt");
+			at=rs.getString("at");
+			ty=rs.getString("ty");
+			
+			if (dt==null)
+				dt="        ";
+			if (at==null)
+				at="        ";
+			resultlist.add(new TrainQuery(id, from, to, dt, at, ty));
+		}
+		rs.close();
+		stmt.close();
+		for (TrainQuery temp:resultlist)
+			System.out.println(temp);
+	}
 
 }

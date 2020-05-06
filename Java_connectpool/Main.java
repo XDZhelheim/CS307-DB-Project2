@@ -15,6 +15,7 @@ public class Main {
 			current_user=User.login();
 		else if (control==2)
 			current_user=User.signUp();
+		current_user.queryTrain("北京", "深圳");
 	}
     
 }
