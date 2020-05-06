@@ -44,29 +44,30 @@ public class User {
     	boolean control=true;
     	String name=null, pw=null;
     	ResultSet rs=null;
+    	PreparedStatement stmt=null;
     	while (control) {
-	    	System.out.print("Enter your name: ");
+	    	System.out.print("用户名：");
 			name=scan.next();
-			System.out.print("Enter password: ");
+			System.out.print("密码：");
 			pw=scan.next();
 			
-			PreparedStatement stmt=conn.prepareStatement("select type from users where user_name=? and password=?;");
+			stmt=conn.prepareStatement("select type from users where user_name=? and password=?;");
 			stmt.setString(1, name);
 			stmt.setString(2, pw);
 			
 			rs=stmt.executeQuery();
 			if (!rs.next()) {
-				System.out.println("Wrong name or password, please retry.");
+				System.out.println("用户名或密码有误，请重试");
 				continue;
 			}
 			else {
-				System.out.println(name+", welcome back!");
+				System.out.println(name+", 欢迎回来！");
 				control=false;
-				stmt.close();
 			}
     	}
     	String t=rs.getString("type");
     	rs.close();
+    	stmt.close();
 		if (t.equals("A"))
 			return new User(name, UserType.ADMIN);
 		return new User(name, UserType.PASSENGER);
@@ -75,26 +76,40 @@ public class User {
 	public static User signUp() throws Exception {
 		boolean control=true;
 		String name=null;
+		PreparedStatement stmt=null;
 		while (control) {
-			System.out.println("-----Creat new user-----");
-			System.out.print("Enter your name: ");
-			name=scan.next();
-			String pw=null;
+			System.out.println("-----注册-----");
 			boolean control2=true;
 			while (control2) {
-				System.out.print("Enter your password: ");
+				System.out.print("请输入用户名：");
+				name=scan.next();
+				stmt=conn.prepareStatement("select 1 from users where user_name='"+name+"';");
+				ResultSet rs=stmt.executeQuery();
+				if (rs.next()) {
+					System.out.println("用户名重复，请重试");
+					continue;
+				}
+				else {
+					control2=false;
+					rs.close();
+				}
+			}
+			String pw=null;
+			boolean control3=true;
+			while (control3) {
+				System.out.print("请输入密码：");
 				pw=scan.next();
-				System.out.print("Confirm your password: ");
+				System.out.print("再次输入密码：");
 				String temp=scan.next();
 				if (!temp.equals(pw)) {
-					System.out.println("Wrong password.");
+					System.out.println("密码不一致，请重新输入");
 					continue;
 				}
 				else
-					control2=false;
+					control3=false;
 			}
 			
-			PreparedStatement stmt=conn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
+			stmt=conn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
 			stmt.setString(1, name);
 			stmt.setString(2, pw);
 			try {
@@ -105,9 +120,15 @@ public class User {
 				continue;
 			}
 			control=false;
+			stmt.close();
 		}
-		System.out.println("Welcome, "+name+"!");
+		System.out.println("欢迎, "+name+"!");
 		return new User(name, UserType.PASSENGER);
+	}
+	
+	public static void exit() throws SQLException {
+		conn.close();
+		System.exit(0);
 	}
 
 }
