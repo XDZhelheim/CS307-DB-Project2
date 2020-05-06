@@ -71,5 +71,43 @@ public class User {
 			return new User(name, UserType.ADMIN);
 		return new User(name, UserType.PASSENGER);
     }
+	
+	public static User signUp() throws Exception {
+		boolean control=true;
+		String name=null;
+		while (control) {
+			System.out.println("-----Creat new user-----");
+			System.out.print("Enter your name: ");
+			name=scan.next();
+			String pw=null;
+			boolean control2=true;
+			while (control2) {
+				System.out.print("Enter your password: ");
+				pw=scan.next();
+				System.out.print("Confirm your password: ");
+				String temp=scan.next();
+				if (!temp.equals(pw)) {
+					System.out.println("Wrong password.");
+					continue;
+				}
+				else
+					control2=false;
+			}
+			
+			PreparedStatement stmt=conn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
+			stmt.setString(1, name);
+			stmt.setString(2, pw);
+			try {
+				stmt.execute();
+			}
+			catch (Exception e) {
+				System.out.println("User already exist, please try again.");
+				continue;
+			}
+			control=false;
+		}
+		System.out.println("Welcome, "+name+"!");
+		return new User(name, UserType.PASSENGER);
+	}
 
 }

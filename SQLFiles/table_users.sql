@@ -3,7 +3,7 @@ create table users (
     user_name varchar(255) not null,
     password varchar(20) not null,
     type char not null,
-    unique (user_name, password),
+    unique (user_name),
     check (type in('A', 'P'))
 );
 
