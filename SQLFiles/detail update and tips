@@ -1,0 +1,12 @@
+----5.7
+
+--这样会返回一个表
+select *
+from recommend_path('北京西', '深圳北');
+--这样会返回一个结果集
+select recommend_path('北京西', '深圳北');
+
+--更新price
+update train
+set price_from_start_station=modify_price(train_num, stop_num, train_type, arrive_time);
+
