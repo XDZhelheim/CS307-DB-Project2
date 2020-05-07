@@ -126,15 +126,19 @@ public class User {
 		return new User(name, UserType.PASSENGER);
 	}
 	
-	public static void exit() throws SQLException {
+	public static void closeConnection() throws SQLException {
 		conn.close();
-		System.exit(0);
+	}
+	
+	public static void logout() {
+		Main.current_user=null;
+		Main.control=-1;
 	}
 	
 	//--------------------------------------------------------------------------------------------------------------
 	
-	public void queryTrain(String start, String arrive) throws SQLException {
-		String sql="select t1.train_num as id, t1.station_name as from, t2.station_name as to, t1.depart_time as dt, t2.arrive_time as at, t1.train_type as ty"
+	public ArrayList<TrainQuery> queryTrain(String start, String arrive) throws SQLException {
+		String sql="select t1.train_num as id, t1.station_name as from, t1.stop_num as stop1, t2.station_name as to, t2.stop_num as stop2, t1.depart_time as dt, t2.arrive_time as at, t1.train_type as ty"
 				+ " from (select * from train where station_name like ?) as t1 join (select * from train where station_name like ?) as t2 "
 				+ "on t1.train_num=t2.train_num and t1.stop_num<t2.stop_num;";
 		PreparedStatement stmt=conn.prepareStatement(sql);
@@ -142,11 +146,17 @@ public class User {
 		stmt.setString(2, "%"+arrive+"%");
 		ResultSet rs=stmt.executeQuery();
 		String id=null, from=null, to=null, dt=null, at=null, ty=null;
+		int stop1=-1, stop2=-1;
+		int ti=-1;
+		PreparedStatement ticketquery=null;
+		ResultSet ticketresult=null;
 		ArrayList<TrainQuery> resultlist=new ArrayList<>();
 		while (rs.next()) {
 			id=rs.getString("id");
 			from=rs.getString("from");
+			stop1=rs.getInt("stop1");
 			to=rs.getString("to");
+			stop2=rs.getInt("stop2");
 			dt=rs.getString("dt");
 			at=rs.getString("at");
 			ty=rs.getString("ty");
@@ -155,13 +165,31 @@ public class User {
 				dt="        ";
 			if (at==null)
 				at="        ";
-			resultlist.add(new TrainQuery(id, from, to, dt, at, ty));
+			
+			ticketquery=conn.prepareStatement("select min(spear_seat) as ti from train where train_num=? and stop_num between ? and ?");
+			ticketquery.setString(1, id);
+			ticketquery.setInt(2, stop1);
+			ticketquery.setInt(3, stop2);
+			
+			ticketresult=ticketquery.executeQuery();
+			while (ticketresult.next())
+				ti=ticketresult.getInt("ti");
+			
+			resultlist.add(new TrainQuery(id, from, to, dt, at, ty, ti));
 		}
+		ticketresult.close();
+		ticketquery.close();
 		rs.close();
 		stmt.close();
 		System.out.println("车次查询结果："+start+"→"+arrive);
 		for (TrainQuery temp:resultlist)
 			System.out.println(temp);
+		return resultlist;
 	}
-
+	
+	public void reserveTicket(String start, String arrive) throws SQLException {
+		ArrayList<TrainQuery> trains=queryTrain(start, arrive);
+		
+	}
+	
 }

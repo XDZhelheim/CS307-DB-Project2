@@ -2,15 +2,17 @@ package Project2_12306;
 
 public class TrainQuery {
 	private String train_num, depart_station, arrive_station, depart_time, arrive_time, train_type;
+	private int tickets;
 
 	public TrainQuery(String train_num, String depart_station, String arrive_station, String depart_time,
-			String arrive_time, String train_type) {
+			String arrive_time, String train_type, int tickets) {
 		this.train_num = train_num;
 		this.depart_station = depart_station;
 		this.arrive_station = arrive_station;
 		this.depart_time = depart_time;
 		this.arrive_time = arrive_time;
 		this.train_type = train_type;
+		this.tickets=tickets;
 	}
 
 	public String getTrain_num() {
@@ -36,9 +38,14 @@ public class TrainQuery {
 	public String getTrain_type() {
 		return train_type;
 	}
+	
+
+	public int getTickets() {
+		return tickets;
+	}
 
 	@Override
 	public String toString() {
-		return train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time;
+		return train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time+"\t余票: "+tickets;
 	}
 }
