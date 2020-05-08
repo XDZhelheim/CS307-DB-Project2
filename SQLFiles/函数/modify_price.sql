@@ -4,10 +4,11 @@ create function modify_price(train_n character varying, stop integer, train_type
 as
 $$
 declare
-    danjia double precision;
-    leave  varchar;
-    time   varchar;
-    test   double precision;
+    danjia   double precision;
+    leave    varchar;
+    time     varchar;
+    test     double precision;
+    lasttest double precision;
 begin
     if stop = 1 then
         return 0.00;
@@ -21,11 +22,12 @@ begin
         when '动车' then danjia = 51.29;
         when '其它' then danjia = 4.47;
         end case;
-    select depart_time into leave from train where train_num = train_n and stop_num = 1;
+    select i.depart_time into leave from inquire_table i where i.train_num = train_n and i.stop_num = 1;
     time = subtract_time_train(leave, arrive, train_n, 1, stop);
     test := danjia * (cast((trim(split_part(time, '小', 1))) as double precision)
         + cast(trim(split_part(split_part(time, '时', 2), '分', 1)) as double precision) / 60.0);
-    if test < 0
+    select price_from_start_station into lasttest from inquire_table where train_num = train_n and stop_num = stop - 1;
+    if test < 0 or test < lasttest
     then
         test = test + danjia * 24;
     end if;

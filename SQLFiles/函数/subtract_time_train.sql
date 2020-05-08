@@ -1,4 +1,4 @@
-create function subtract_time_train(leave character varying, arrive character varying, train_n character varying,
+create function subtract_time_train(leave character varying, arrive character varying, tra_n varchar,
                                     stop1 integer, stop2 integer) returns character varying
     language plpgsql
 as
@@ -20,10 +20,14 @@ begin
     result_hour := hour2 - hour1;
     for i in stop1..stop2 - 1
         loop
-            select depart_time into try1 from train where train_num = train_n and stop_num = i;
+            select depart_time into try1 from inquire_table where train_num = tra_n and stop_num = i;
             if i != stop2 - 1
             then
-                select depart_time into try2 from train where train_num = train_n and stop_num = i + 1;
+                select depart_time into try2 from inquire_table where train_num = tra_n and stop_num = i + 1;
+                if try1 is null or try2 is null
+                then
+                    continue;
+                end if;
                 if cast(substr(try1, 1, 2) as int) > cast(substr(try2, 1, 2) as int)
                 then
                     result_hour = result_hour + 24;
@@ -40,6 +44,10 @@ begin
         result_minute := result_minute + 60;
         result_hour := result_hour - 1;
     end if;
+    while result_hour < 0
+        loop
+            result_hour = result_hour + 24;
+        end loop;
     return result_hour || ' 小时 ' || result_minute || ' 分钟';
 end;
 $$;

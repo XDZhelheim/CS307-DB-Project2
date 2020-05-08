@@ -47,4 +47,31 @@ add constraint fk_station_id
 foreign key (station_id)
 references station (station_id);
 
+--5.9
+
+--经过多次对比 建一个查询专用表有明显效率提升
+--另 path_recommend 临时表里的结果是不换乘和一次换乘的union 因为列数必须一样 且不能返回null '' ' '等无关内容 
+--所以暂时设定的是不换乘的第二班列车信息和第一班相同 展示结果时只需根据first_to是否为目的地作if判断 
+
+CREATE TABLE inquire_table
+(
+    train_num                varchar(5)       DEFAULT NULL,
+    stop_num                 int              DEFAULT NULL,
+    station_name             varchar(10)      DEFAULT NULL,
+    arrive_time              varchar(10)      DEFAULT NULL,
+    depart_time              varchar(10)      DEFAULT NULL,
+    train_type               varchar(5)       DEFAULT NULL,
+    price_from_start_station double precision default null,
+    spear_seat               int              default null
+);
+
+alter table inquire_table
+    add constraint pr_key
+        primary key (train_num, stop_num);
+
+--插入语句和之前的一样 记得改一下表的名字 插入之后调用 modify_price算票价
+
+update inquire_table
+set price_from_start_station=modify_price(train_num, stop_num, train_type, arrive_time);
+
 

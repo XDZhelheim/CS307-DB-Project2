@@ -1,4 +1,3 @@
---建函数之前 先建表
 create function recommend_path(start_station character varying, arrive_station character varying) returns SETOF path_recommend
     language plpgsql
 as
@@ -22,8 +21,8 @@ begin
                          subtract_time_train(t1.depart_time, t2.arrive_time, t1.train_num,
                                              t1.stop_num, t2.stop_num)             as total_time,
                          t2.price_from_start_station - t1.price_from_start_station as total_price
-                  from train t1
-                           join train t2 on t1.train_num = t2.train_num and t1.stop_num < t2.stop_num
+                  from inquire_table t1
+                           join inquire_table t2 on t1.train_num = t2.train_num and t1.stop_num < t2.stop_num
                   where t1.station_name = start_station
                     and t2.station_name = arrive_station
                   union
@@ -51,12 +50,13 @@ begin
                          round(cast(t4.price_from_start_station - t3.price_from_start_station +
                                     t2.price_from_start_station -
                                     t1.price_from_start_station as numeric), 2)    as total_price
-                  from train t1
-                           join train t2 on t1.train_num = t2.train_num and t1.stop_num < t2.stop_num
-                           join train t3 on t3.station_name = t2.station_name
-                           join train t4 on t4.train_num = t3.train_num and t3.stop_num < t4.stop_num
+                  from inquire_table t1
+                           join inquire_table t2 on t1.train_num = t2.train_num and t1.stop_num < t2.stop_num
+                           join inquire_table t3 on t3.station_name = t2.station_name
+                           join inquire_table t4 on t4.train_num = t3.train_num and t3.stop_num < t4.stop_num
                   where t1.station_name = start_station
-                    and t4.station_name = arrive_station);
+                    and t4.station_name = arrive_station
+        );
 end;
 $$;
 
