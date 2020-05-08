@@ -1,6 +1,6 @@
 --为了避免掉坑 以下代码务必按顺序执行
 
-
+--先把原来的train表改名成schedule
 create table train
 (
     train_num  varchar not null,
