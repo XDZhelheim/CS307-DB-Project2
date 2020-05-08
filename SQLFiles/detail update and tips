@@ -32,3 +32,19 @@ create table path_recommend
     total_price       double precision
 );
 
+
+--5.8
+
+--更新外键 （昨天忘了
+
+alter table schedule
+add constraint fk_train_id
+foreign key (train_id)
+references train (train_id);
+
+alter table schedule
+add constraint fk_station_id
+foreign key (station_id)
+references station (station_id);
+
+
