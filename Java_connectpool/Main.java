@@ -23,6 +23,7 @@ public class Main {
 				User.closeConnection();
 				System.exit(0);
 			}
+			current_user.reserveTicket("北京", "深圳");
 			current_user.queryTrain("北京", "深圳");
 			User.logout();
     	}

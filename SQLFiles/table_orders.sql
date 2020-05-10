@@ -107,7 +107,7 @@ begin
 end;
 $$ language plpgsql;
 
-create trigger people_trigger
+create trigger person_id_trigger
     before insert
     on orders
     for each row
