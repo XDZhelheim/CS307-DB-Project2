@@ -5,7 +5,7 @@ $$
 begin
     return (select min(spear_seat)
             from (select t.spear_seat
-                  from inquire_table t
+                  from vpath t
                   where t.train_num = tra_num
                     and t.stop_num >= stop1
                     and t.stop_num < stop2) as tss);

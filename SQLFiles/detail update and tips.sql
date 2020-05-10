@@ -74,4 +74,20 @@ alter table inquire_table
 update inquire_table
 set price_from_start_station=modify_price(train_num, stop_num, train_type, arrive_time);
 
+5.10
+--view处理 对比了很多次查询效率 基本上没有差别 inquire_table理论上可以作废
+--但是这里不是很懂老师说的更新表时view不会更新，我在网上找到的是view会随表更新而更新，试了一下也是这样
+
+create view vpath as
+select t.train_num,
+       ss.stop_num,
+       s.station_name,
+       ss.arrive_time,
+       ss.depart_time,
+       t.train_type,
+       ss.price_from_start_station,
+       ss.spear_seat
+from schedule ss
+         inner join train t on ss.train_id = t.train_id
+         inner join station s on ss.station_id = s.station_id;
 

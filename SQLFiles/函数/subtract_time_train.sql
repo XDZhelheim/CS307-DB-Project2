@@ -20,10 +20,10 @@ begin
     result_hour := hour2 - hour1;
     for i in stop1..stop2 - 1
         loop
-            select depart_time into try1 from inquire_table where train_num = tra_n and stop_num = i;
+            select depart_time into try1 from vpath where train_num = tra_n and stop_num = i;
             if i != stop2 - 1
             then
-                select depart_time into try2 from inquire_table where train_num = tra_n and stop_num = i + 1;
+                select depart_time into try2 from vpath where train_num = tra_n and stop_num = i + 1;
                 if try1 is null or try2 is null
                 then
                     continue;
@@ -51,6 +51,3 @@ begin
     return result_hour || ' 小时 ' || result_minute || ' 分钟';
 end;
 $$;
-
-alter function subtract_time_train(varchar, varchar, varchar, integer, integer) owner to checker;
-
