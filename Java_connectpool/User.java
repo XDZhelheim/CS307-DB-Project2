@@ -116,7 +116,7 @@ public class User {
 				stmt.execute();
 			}
 			catch (Exception e) {
-				System.out.println("User already exist, please try again.");
+				System.out.println("错误：用户已存在");
 				continue;
 			}
 			control=false;
@@ -137,11 +137,9 @@ public class User {
 	
 	//--------------------------------------------------------------------------------------------------------------
 	
-	public static ArrayList<TrainQuery> getTrainQueryResult(String start, String arrive) throws SQLException {
-		String sql="with temp as (select stop_num, arrive_time, depart_time, price_from_start_station, spear_seat, t.train_id, s.station_id, station_name, train_num, train_type "
-				+ "from schedule join station as s on schedule.station_id = s.station_id join train as t on schedule.train_id = t.train_id) " + 
+	private static ArrayList<TrainQuery> getTrainQueryResult(String start, String arrive) throws SQLException {
+		String sql=
 				"select t1.train_num    as tn," + 
-				"       t1.train_id     as id," + 
 				"       t1.station_name as from," + 
 				"       t1.stop_num     as stop1," +
 				"       t2.station_name as to," + 
@@ -150,14 +148,13 @@ public class User {
 				"       t2.arrive_time  as at," + 
 				"       t1.train_type   as ty," + 
 				"       t2.price_from_start_station-t1.price_from_start_station as pr " +
-				"from (select train_num, train_id, station_name, depart_time, train_type, stop_num, price_from_start_station from temp where station_name like ?) as t1 " + 
-				"join (select train_num, station_name, arrive_time, stop_num, price_from_start_station from temp where station_name like ?) as t2 on t1.train_num = t2.train_num and t1.stop_num<t2.stop_num;";
+				"from (select train_num, station_name, depart_time, train_type, stop_num, price_from_start_station from vpath where station_name like ?) as t1 " + 
+				"join (select train_num, station_name, arrive_time, stop_num, price_from_start_station from vpath where station_name like ?) as t2 on t1.train_num = t2.train_num and t1.stop_num<t2.stop_num;";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		stmt.setString(1, "%"+start+"%");
 		stmt.setString(2, "%"+arrive+"%");
 		ResultSet rs=stmt.executeQuery();
 		String tn=null, from=null, to=null, dt=null, at=null, ty=null;
-		int id=-1;
 		int stop1=-1, stop2=-1;
 		int ti=-1;
 		double pr=-1;
@@ -166,7 +163,6 @@ public class User {
 		ArrayList<TrainQuery> resultlist=new ArrayList<>();
 		while (rs.next()) {
 			tn=rs.getString("tn");
-			id=rs.getInt("id");
 			from=rs.getString("from");
 			stop1=rs.getInt("stop1");
 			to=rs.getString("to");
@@ -181,16 +177,16 @@ public class User {
 			if (at==null)
 				at="        ";
 			
-			ticketquery=conn.prepareStatement("select min(spear_seat) as ti from schedule where train_id=? and stop_num between ? and ?");
-			ticketquery.setInt(1, id);
+			ticketquery=conn.prepareStatement("select min_seat(?, ?, ?) as ti;");
+			ticketquery.setString(1, tn);
 			ticketquery.setInt(2, stop1);
-			ticketquery.setInt(3, stop2-1);
+			ticketquery.setInt(3, stop2);
 			
 			ticketresult=ticketquery.executeQuery();
 			while (ticketresult.next())
 				ti=ticketresult.getInt("ti");
 			
-			resultlist.add(new TrainQuery(tn, from, to, dt, at, ty, ti, pr, id, stop1, stop2));
+			resultlist.add(new TrainQuery(tn, from, to, dt, at, ty, ti, pr, stop1, stop2));
 		}
 		ticketresult.close();
 		ticketquery.close();
@@ -247,7 +243,39 @@ public class User {
 		stmt.setInt(2, tq.getStop1());
 		stmt.setInt(3, tq.getStop2()-1);
 		stmt.execute();
+		stmt.close();
 		System.out.println("订票成功！");
+	}
+	
+	private ArrayList<OrderQuery> getOrderQueryResult() throws SQLException {
+		ArrayList<OrderQuery> list=new ArrayList<>();
+		String sql="select order_id, train_num, start_station, arrive_station, person_id, price from orders where user_name=?";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		stmt.setString(1, name);
+		int id=0;
+		String tn=null, ss=null, as=null, pi=null;
+		double pr=0;
+		ResultSet rs=stmt.executeQuery();
+		while (rs.next()) {
+			id=rs.getInt("order_id");
+			tn=rs.getString("train_num");
+			ss=rs.getString("start_station");
+			as=rs.getString("arrive_station");
+			pi=rs.getString("person_id");
+			pr=rs.getDouble("price");
+			
+			list.add(new OrderQuery(id, tn, ss, as, pi, pr));
+		}
+		rs.close();
+		stmt.close();
+		return list;
+	}
+	
+	public void queryOrder() throws SQLException {
+		ArrayList<OrderQuery> orders=getOrderQueryResult();
+		System.out.println("您的订单:");
+		for (OrderQuery x:orders)
+			System.out.println(x);
 	}
 	
 }
