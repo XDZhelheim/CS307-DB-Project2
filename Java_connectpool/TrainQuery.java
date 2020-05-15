@@ -2,11 +2,11 @@ package Project2_12306;
 
 public class TrainQuery {
 	private String train_num, depart_station, arrive_station, depart_time, arrive_time, train_type;
-	private int train_id, stop1, stop2, tickets;
+	private int stop1, stop2, tickets;
 	private double price;
 
 	public TrainQuery(String train_num, String depart_station, String arrive_station, String depart_time,
-			String arrive_time, String train_type, int tickets, double price, int train_id, int stop1, int stop2) {
+			String arrive_time, String train_type, int tickets, double price, int stop1, int stop2) {
 		this.train_num = train_num;
 		this.depart_station = depart_station;
 		this.arrive_station = arrive_station;
@@ -15,7 +15,6 @@ public class TrainQuery {
 		this.train_type = train_type;
 		this.tickets=tickets;
 		this.price=price;
-		this.train_id=train_id;
 		this.stop1=stop1;
 		this.stop2=stop2;
 	}
@@ -50,10 +49,6 @@ public class TrainQuery {
 	
 	public double getPrice() {
 		return price;
-	}
-
-	public int getTrain_id() {
-		return train_id;
 	}
 
 	public int getStop1() {
