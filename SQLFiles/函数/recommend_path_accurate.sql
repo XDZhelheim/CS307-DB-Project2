@@ -2,7 +2,14 @@ create function recommend_path_accurate(start_station character varying, arrive_
     language plpgsql
 as
 $$
+declare
+    tmpv varchar;
+    tmpi int;
+    tmpd double precision;
 begin
+    tmpv = '';
+    tmpi = 0;
+    tmpd = 0.0;
     return query (select t1.train_num                                              as first_train_num,
                          t1.train_type                                             as first_train_type,
                          round(cast(t2.price_from_start_station - t1.price_from_start_station as
@@ -12,14 +19,13 @@ begin
                          t1.depart_time                                            as first_depart,
                          t2.arrive_time                                            as first_arrive,
                          min_seat(t1.train_num, t1.stop_num, t2.stop_num)          as first_left_seat,
-                         t1.train_num                                              as second_train_num,
-                         t1.train_type,
-                         round(cast(t2.price_from_start_station - t1.price_from_start_station as
-                                   numeric), 2),
-                         t2.station_name,
-                         t1.depart_time,
-                         t2.arrive_time,
-                         min_seat(t1.train_num, t1.stop_num, t2.stop_num),
+                         tmpv                                                      as second_train_num,
+                         tmpv,
+                         tmpd,
+                         tmpv,
+                         tmpv,
+                         tmpv,
+                         tmpi,
                          subtract_time_train(t1.depart_time, t2.arrive_time, t1.train_num,
                                              t1.stop_num, t2.stop_num)             as total_time,
                          t2.price_from_start_station - t1.price_from_start_station as total_price
@@ -61,5 +67,5 @@ begin
                   where t1.station_name = start_station
                     and t4.station_name = arrive_station
     );
-end;
+end ;
 $$;
