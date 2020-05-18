@@ -30,9 +30,10 @@ public class Main {
 			if (current_user.getType()==UserType.PASSENGER) {
 				while (control==-2) {
 					System.out.println("1. 查询车次");
-			    	System.out.println("2. 订票");
-			    	System.out.println("3. 查询订单");
-			    	System.out.println("4. 取消订单");
+					System.out.println("2. 查询单列车");
+			    	System.out.println("3. 订票");
+			    	System.out.println("4. 查询订单");
+			    	System.out.println("5. 取消订单");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
@@ -51,6 +52,13 @@ public class Main {
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
+			    		System.out.print("请输入要查询的列车号: ");
+			    		String tn=scan.next();
+			    		current_user.queryTrainInformation(tn);
+			    		Thread.sleep(1000);
+			    		control=-2;
+			    	}
+			    	else if (control==3) {
 			    		System.out.print("请输入出发站: ");
 			    		String start=scan.next();
 			    		System.out.print("请输入到达站: ");
@@ -59,7 +67,7 @@ public class Main {
 			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
-			    	else if (control==3) {
+			    	else if (control==4) {
 			    		orderlist=current_user.queryOrder();
 			    		System.out.print("是否需要取消订单? (y/n) ");
 			    		String yn=scan.next();
@@ -68,8 +76,22 @@ public class Main {
 		    			Thread.sleep(1000);
 			    		control=-2;
 			    	}
-			    	else if (control==4) {
+			    	else if (control==5) {
 			    		current_user.cancelOrder(false, null);
+			    		Thread.sleep(1000);
+			    		control=-2;
+			    	}
+				}
+			}
+			else {
+				while (control==-2) {
+					System.out.println("1. 添加列车");
+			    	System.out.println("0. 注销");
+			    	control=scan.nextInt();
+			    	if (control==0)
+			    		User.logout();
+			    	else if (control==1) {
+			    		current_user.addTrain();
 			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}

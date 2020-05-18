@@ -338,4 +338,128 @@ public class User {
 		System.out.println("订单已取消！");
 	}
 	
+	public void queryTrainInformation(String train_num) throws SQLException {
+		String sql="select stop_num as num, station_name as sn, depart_time as dt, arrive_time as at from vpath where train_num=? order by num";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		int n=0;
+		String sn=null, dt=null, at=null;
+		stmt.setString(1, train_num);
+		ResultSet rs=stmt.executeQuery();
+		while (rs.next()) {
+			n=rs.getInt("num");
+			sn=rs.getString("sn");
+			dt=rs.getString("dt");
+			at=rs.getString("at");
+			
+			if (dt==null)
+				dt="        ";
+			if (at==null)
+				at="        ";
+			
+			System.out.println("第"+n+"站: "+sn+"\t到达时间: "+at+"\t出发时间: "+dt);
+		}
+		rs.close();
+		stmt.close();
+	}
+	
+	//------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	public void addTrain() throws SQLException {
+		System.out.println("---添加新列车---");
+		System.out.print("请输入列车号: ");
+		String tn=scan.next();
+		PreparedStatement temp=conn.prepareStatement("select train_id from train where train_num=?");
+		ResultSet rs=null;
+		temp.setString(1, tn);
+		rs=temp.executeQuery();
+		while (rs.next()) {
+			System.out.println("列车已存在, 请重新输入: ");
+			tn=scan.next();
+			temp.setString(1, tn);
+			rs.close();
+			rs=temp.executeQuery();
+		}
+		rs.close();
+		System.out.print("请输入列车类型 (普快/特快/高铁/动车/直达/城际/其它): ");
+		String type=scan.next();
+		while (!(type.equals("普快") || type.equals("特快") || type.equals("高铁") || type.equals("动车") || type.equals("直达") || type.equals("城际") || type.equals("其它"))) {
+			System.out.print("类型错误, 请重新输入: ");
+			type=scan.next();
+		}
+		String sql="insert into train (train_num, train_type) values (?, ?)";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setString(2, type);
+		stmt.execute();
+		System.out.print("请输入经过站点数: ");
+		int n=scan.nextInt();
+		while (n<=1) {
+			System.out.print("输入无效, 请重新输入: ");
+			n=scan.nextInt();
+		}
+		System.out.println("登记车程: ");
+		String st=null, at=null, dt=null;
+		sql="insert into schedule (stop_num, arrive_time, depart_time, spear_seat, train_id, station_id, price_from_start_station) values (?, ?, ?, ?, (select train_id from train where train_num=?), (select station_id from station where station_name=?), 233);";
+		stmt=conn.prepareStatement(sql);
+		temp=conn.prepareStatement("select station_id from station where station_name=?");
+		for (int i=1;i<=n;i++) {
+			System.out.print("第"+i+"站: ");
+			st=scan.next();
+			temp.setString(1, st);
+			rs=temp.executeQuery();
+			while (!rs.next()) {
+				System.out.println("站名错误, 请重新输入: ");
+				st=scan.next();
+				temp.setString(1, st);
+				rs.close();
+				rs=temp.executeQuery();
+			}
+			rs.close();
+			if (i!=1) {
+				System.out.print("到达时间 (时:分): ");
+				at=scan.next();
+				int index=at.indexOf(":");
+				int hour=Integer.parseInt(at.substring(0, index));
+				int minute=Integer.parseInt(at.substring(index+1, at.length()));
+				while (hour>24 || minute>59) {
+					System.out.print("无效时间, 请重新输入: ");
+					at=scan.next();
+					index=at.indexOf(":");
+					hour=Integer.parseInt(at.substring(0, index));
+					minute=Integer.parseInt(at.substring(index+1, at.length()));
+				}
+			}
+			if (i!=n) {
+				System.out.print("出发时间 (时:分): ");
+				dt=scan.next();
+				int index=dt.indexOf(":");
+				int hour=Integer.parseInt(dt.substring(0, index));
+				int minute=Integer.parseInt(dt.substring(index+1, dt.length()));
+				while (hour>24 || minute>59) {
+					System.out.print("无效时间, 请重新输入: ");
+					dt=scan.next();
+					index=dt.indexOf(":");
+					hour=Integer.parseInt(dt.substring(0, index));
+					minute=Integer.parseInt(dt.substring(index+1, dt.length()));
+				}
+			}
+			stmt.setInt(1, i);
+			if (i!=1)
+				stmt.setString(2, at+":00");
+			else
+				stmt.setString(2, null);
+			if (i!=n)
+				stmt.setString(3, dt+":00");
+			else
+				stmt.setString(3, null);
+			stmt.setInt(4, new Random().nextInt(100));
+			stmt.setString(5, tn);
+			stmt.setString(6, st);
+			stmt.execute();
+		}
+		System.out.println("添加成功!");
+		temp.close();
+		stmt.close();
+	}
+	
 }
