@@ -91,3 +91,31 @@ from schedule ss
          inner join train t on ss.train_id = t.train_id
          inner join station s on ss.station_id = s.station_id;
 
+
+--5.18
+--创建calculate_price函数返回trigger（代码单独放在函数文件夹里
+--创建trigger
+create trigger price_trigger
+    before insert
+    on schedule
+    for each row
+execute procedure calculate_price();
+
+--insert to schedule样例
+
+insert into schedule(stop_num, arrive_time, depart_time,  spear_seat, train_id, station_id)
+values (14, '01:00:00', '01:27:00', 1, 2091, 1);
+
+select *
+from schedule
+where train_id = 2091;
+
+delete
+from schedule
+where train_id = 2091
+  and stop_num = 14;
+
+
+--modify_price函数暂时没用了 可以删除
+
+
