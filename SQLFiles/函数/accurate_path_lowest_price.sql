@@ -22,6 +22,8 @@ begin
                          t.first_train_type,
                          t.first_from,
                          t.first_to,
+                         t.first_from_stop,
+                         t.first_to_stop,
                          t.first_depart,
                          t.first_arrive,
                          min_seat(depart_date, t.first_train_num, t.first_from_stop, t.first_to_stop, 1),
@@ -39,6 +41,8 @@ begin
                          t.second_train_num,
                          t.second_train_type,
                          t.second_to,
+                         t.second_from_stop,
+                         t.second_to_stop,
                          t.second_leave,
                          t.second_arrive,
                          min_seat(depart_date + tmp, t.second_train_num, t.second_from_stop, t.second_to_stop,
@@ -63,4 +67,3 @@ begin
 
 end ;
 $$;
-
