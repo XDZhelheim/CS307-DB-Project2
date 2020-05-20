@@ -1,3 +1,4 @@
+--精确检索 最少价格
 create function accurate_path_lowest_price(depart_date date, start_station character varying,
                                            arrive_station character varying, page integer) returns SETOF path_recommend
     language plpgsql
@@ -17,7 +18,7 @@ begin
         loop
             select date_change
             into tmp
-            from date_change(depart_date, t.first_train_num, t.first_from_stop, t.first_to_stop);
+            from date_change(t.first_train_num, t.first_from_stop, t.first_to_stop);
             return next (t.first_train_num,
                          t.first_train_type,
                          t.first_from,
@@ -67,3 +68,4 @@ begin
 
 end ;
 $$;
+

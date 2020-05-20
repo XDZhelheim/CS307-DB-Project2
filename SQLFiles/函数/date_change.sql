@@ -1,4 +1,5 @@
-create function date_change(dat date, tra_num character varying, stop1 integer, stop2 integer) returns integer
+--用于判断从出发站到终点站跨了几天 返回天数
+create function date_change( tra_num character varying, stop1 integer, stop2 integer) returns integer
     language plpgsql
 as
 $$

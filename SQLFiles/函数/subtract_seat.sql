@@ -1,3 +1,13 @@
+--用户订票时 传参 出发日期 列车号  出发的站序号 到达的站序号 座位类型  如果要换乘需要分别调用两次这个函数
+--样例 subtract_seat('2020-05-27', 'K1808', 1, 34, 1);
+
+--如果是换乘的情况下 总共需要调用三个函数
+subtract_seat('2020-05-27', 'K1808', 1, 34, 1);
+int tmp；
+select date_change into tmp date_change( 'K1808',  1, 34)；
+subtract_seat('2020-05-27'+tmp,  ...第二班车的信息);
+
+
 create function subtract_seat(dat date, tra_num character varying, stop1 integer, stop2 integer, seat_typ integer) returns void
 as
 $$
