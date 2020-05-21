@@ -2,21 +2,21 @@ package Project2_12306;
 
 public class TrainQuery {
 	private String train_num, depart_station, arrive_station, depart_time, arrive_time, train_type;
-	private int stop1, stop2, tickets;
-	private double price;
+	private int stop1, stop2;
+	private int sid1, sid2;
 
 	public TrainQuery(String train_num, String depart_station, String arrive_station, String depart_time,
-			String arrive_time, String train_type, int tickets, double price, int stop1, int stop2) {
+			String arrive_time, String train_type, int stop1, int stop2, int sid1, int sid2) {
 		this.train_num = train_num;
 		this.depart_station = depart_station;
 		this.arrive_station = arrive_station;
 		this.depart_time = depart_time;
 		this.arrive_time = arrive_time;
 		this.train_type = train_type;
-		this.tickets=tickets;
-		this.price=price;
 		this.stop1=stop1;
 		this.stop2=stop2;
+		this.sid1=sid1;
+		this.sid2=sid2;
 	}
 
 	public String getTrain_num() {
@@ -43,14 +43,6 @@ public class TrainQuery {
 		return train_type;
 	}
 	
-	public int getTickets() {
-		return tickets;
-	}
-	
-	public double getPrice() {
-		return price;
-	}
-
 	public int getStop1() {
 		return stop1;
 	}
@@ -59,8 +51,16 @@ public class TrainQuery {
 		return stop2;
 	}
 
+	public int getSid1() {
+		return sid1;
+	}
+
+	public int getSid2() {
+		return sid2;
+	}
+
 	@Override
 	public String toString() {
-		return train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time+"\t余票: "+tickets+"\t票价: "+price;
+		return train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time;
 	}
 }
