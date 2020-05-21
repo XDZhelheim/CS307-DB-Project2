@@ -29,6 +29,7 @@ public class Main {
 			control=-2;
 			if (current_user.getType()==UserType.PASSENGER) {
 				while (control==-2) {
+					System.out.println("-------------");
 					System.out.println("1. 查询车次");
 					System.out.println("2. 查询单列车");
 			    	System.out.println("3. 订票");

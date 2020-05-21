@@ -353,20 +353,28 @@ public class User {
 				stmt.execute();
 				stmt.close();
 				System.out.println("订票成功！");
+				queryOrder();
 			}
-			System.out.println("查看其他列车? (y/n)");
+			System.out.print("查看其他列车? (y/n) ");
 			String ctr=scan.next();
 			ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
 		}
 	}
 	
 	private ArrayList<OrderQuery> getOrderQueryResult() throws SQLException {
+		ArrayList<String> seats=new ArrayList<>();
+		ResultSet seattypes=conn.prepareStatement("select type_name as tn from seat_type;").executeQuery();
+		while (seattypes.next())
+			seats.add(seattypes.getString("tn"));
+		seattypes.close();
+		
 		ArrayList<OrderQuery> list=new ArrayList<>();
-		String sql="select order_id, train_num, start_station, arrive_station, person_id, price from orders where user_name=?";
+		String sql="select order_id, person_id, train_num, start_station, arrive_station, price, "
+				+ "order_date, seat_type_id, depart_time, arrive_time, date_change from orders where user_name=?";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		stmt.setString(1, name);
-		int id=0;
-		String tn=null, ss=null, as=null, pi=null;
+		int id=-1, sti=-1, dc=-1;
+		String tn=null, ss=null, as=null, pi=null, date=null, dt=null, at=null;
 		double pr=0;
 		ResultSet rs=stmt.executeQuery();
 		while (rs.next()) {
@@ -376,8 +384,13 @@ public class User {
 			as=rs.getString("arrive_station");
 			pi=rs.getString("person_id");
 			pr=rs.getDouble("price");
+			date=rs.getString("order_date");
+			sti=rs.getInt("seat_type_id");
+			dt=rs.getString("depart_time");
+			at=rs.getString("arrive_time");
+			dc=rs.getInt("date_change");
 			
-			list.add(new OrderQuery(id, tn, ss, as, pi, pr));
+			list.add(new OrderQuery(id, tn, ss, as, pi, pr, date, seats.get(sti-1), dt, at, dc));
 		}
 		rs.close();
 		stmt.close();
@@ -423,17 +436,21 @@ public class User {
 		stmt.setInt(1, oq.getOrder_id());
 		stmt.execute();
 		
-		sql="update schedule set spear_seat=spear_seat+1 where train_id=(select train_id from train where train_num=?) "
-				+ "and stop_num between (select stop_num from inquire_table where train_num=? and station_name=?) and (select stop_num from inquire_table where train_num=? and station_name=?)-1;";
+		sql="select addback_seat(cast(? as date), ?, "
+				+ "(select stop_num from inquire_table where train_num=? and station_name=?), (select stop_num from inquire_table where train_num=? and station_name=?), "
+				+ "(select type_id from seat_type where type_name=?));";
 		stmt=conn.prepareStatement(sql);
-		stmt.setString(1, oq.getTrain_num());
+		stmt.setString(1, oq.getDate());
 		stmt.setString(2, oq.getTrain_num());
-		stmt.setString(3, oq.getStart_station());
-		stmt.setString(4, oq.getTrain_num());
-		stmt.setString(5, oq.getArrive_station());
+		stmt.setString(3, oq.getTrain_num());
+		stmt.setString(4, oq.getStart_station());
+		stmt.setString(5, oq.getTrain_num());
+		stmt.setString(6, oq.getArrive_station());
+		stmt.setString(7, oq.getSeatType());
 		stmt.execute();
 		stmt.close();
 		System.out.println("订单已取消！");
+		queryOrder();
 	}
 	
 	public void queryTrainInformation(String train_num) throws SQLException {

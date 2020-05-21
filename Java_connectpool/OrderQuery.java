@@ -4,14 +4,22 @@ public class OrderQuery {
 	private int order_id;
 	private String train_num, start_station, arrive_station, person_id;
 	private double price;
+	private String date, depart_time, arrive_time, seat_type;
+	private int date_change;
 	
-	public OrderQuery(int order_id, String train_num, String start_station, String arrive_station, String person_id, double price) {
+	public OrderQuery(int order_id, String train_num, String start_station, String arrive_station, 
+			String person_id, double price, String date, String seat_type, String depart_time, String arrive_time, int date_change) {
 		this.order_id = order_id;
 		this.train_num = train_num;
 		this.start_station = start_station;
 		this.arrive_station = arrive_station;
 		this.person_id = person_id;
 		this.price = price;
+		this.date=date;
+		this.seat_type=seat_type;
+		this.depart_time=depart_time;
+		this.arrive_time=arrive_time;
+		this.date_change=date_change;
 	}
 
 	public int getOrder_id() {
@@ -38,9 +46,33 @@ public class OrderQuery {
 		return price;
 	}
 
+	public String getDate() {
+		return date;
+	}
+
+	public String getArrive_time() {
+		return arrive_time;
+	}
+
+	public String getSeatType() {
+		return seat_type;
+	}
+
+	public int getDate_change() {
+		return date_change;
+	}
+
+	public String getDepart_time() {
+		return depart_time;
+	}
+
 	@Override
 	public String toString() {
-		return "车次: "+train_num+"\t始发站: "+start_station+"\t到达站: "+arrive_station+"\t乘客ID: "+person_id+"\t票价: "+price;
+		String s="车次: "+train_num+"\t日期: "+date+" \t出发: "+start_station+"  "+depart_time+"\t到达: "+arrive_station+"  "+arrive_time;
+		if (date_change>0)
+			s+="(+"+date_change+")";
+		s+="\t乘客ID: "+person_id+"\t座位类型: "+seat_type+"\t票价: "+price;
+		return s;
 	}
 	
 }
