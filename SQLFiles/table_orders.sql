@@ -2,6 +2,11 @@
 alter table orders add column order_date date not null;
 alter table orders add column seat_type_id int references seat_type;
 
+alter table orders
+add column depart_time varchar(10),
+add column arrive_time varchar(10),
+add column date_change int;
+
 create table if not exists district
 (
     id   serial  not null

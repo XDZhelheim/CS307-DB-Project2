@@ -4,9 +4,10 @@ public class TrainQuery {
 	private String train_num, depart_station, arrive_station, depart_time, arrive_time, train_type;
 	private int stop1, stop2;
 	private int sid1, sid2;
+	private int datechange;
 
 	public TrainQuery(String train_num, String depart_station, String arrive_station, String depart_time,
-			String arrive_time, String train_type, int stop1, int stop2, int sid1, int sid2) {
+			String arrive_time, String train_type, int stop1, int stop2, int sid1, int sid2, int datechange) {
 		this.train_num = train_num;
 		this.depart_station = depart_station;
 		this.arrive_station = arrive_station;
@@ -17,6 +18,7 @@ public class TrainQuery {
 		this.stop2=stop2;
 		this.sid1=sid1;
 		this.sid2=sid2;
+		this.datechange=datechange;
 	}
 
 	public String getTrain_num() {
@@ -59,8 +61,15 @@ public class TrainQuery {
 		return sid2;
 	}
 
+	public int getDateChange() {
+		return datechange;
+	}
+
 	@Override
 	public String toString() {
-		return train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time;
+		String result=train_type+train_num+"\t出发站: "+depart_station+"\t到达站: "+arrive_station+"\t出发时间: "+depart_time+"\t到达时间: "+arrive_time;
+		if (datechange>0)
+			result+="(+"+datechange+")";
+		return result;
 	}
 }
