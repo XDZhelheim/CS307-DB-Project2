@@ -1,6 +1,5 @@
---精确检索 最少价格
-create function accurate_path_lowest_price(depart_date date, start_station character varying,
-                                           arrive_station character varying, page integer) returns SETOF path_recommend
+--模糊检索 时间最短
+create function fuzzy_path_shortest_time(depart_date date, start_station character varying, arrive_station character varying, page integer) returns SETOF path_recommend
     language plpgsql
 as
 $$
@@ -10,8 +9,9 @@ declare
 begin
 
     for t in (select *
-              from recommend_path_accurate(start_station, arrive_station)
-              order by total_lowest_price
+              from recommend_path_fuzzy(start_station, arrive_station)
+              order by cast(trim(split_part(total_time, '小', 1)) as int),
+                       cast(trim(split_part(split_part(total_time, '时', 2), '分', 1)) as int)
               limit 10
               offset
               page * 10 - 10)

@@ -119,3 +119,8 @@ where train_id = 2091
 --modify_price函数暂时没用了 可以删除
 
 
+
+create index train_num_index on inquire_table (train_num);
+create index schedule_id_index on inquire_table (schedule_id);
+create index stop_num_index on inquire_table (stop_num);
+
