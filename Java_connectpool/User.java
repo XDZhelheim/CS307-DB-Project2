@@ -488,7 +488,7 @@ public class User {
 		temp.setString(1, tn);
 		rs=temp.executeQuery();
 		while (rs.next()) {
-			System.out.print("列车已存在, 请重新输入: ");
+			System.out.println("列车已存在, 请重新输入: ");
 			tn=scan.next();
 			temp.setString(1, tn);
 			rs.close();
@@ -514,41 +514,16 @@ public class User {
 		}
 		System.out.println("登记车程: ");
 		String st=null, at=null, dt=null;
-		sql="insert into schedule (stop_num, arrive_time, depart_time, train_id, station_id) values (?, ?, ?, (select train_id from train where train_num=?), (select station_id from station where station_name=?));";
+		sql="insert into schedule (stop_num, arrive_time, depart_time, spear_seat, train_id, station_id, price_from_start_station) values (?, ?, ?, ?, (select train_id from train where train_num=?), (select station_id from station where station_name=?), 233);";
 		stmt=conn.prepareStatement(sql);
-		temp=conn.prepareStatement("select station_id from station where station_name=?;");
-		
-		PreparedStatement selectnewscheduleid=conn.prepareStatement("select max(schedule_id) as newid from schedule;");
-		ResultSet newidresult=null;
-		PreparedStatement updatePrice=conn.prepareStatement("insert into price (schedule_id, seat_type, price_from_start_station) values (?, ?, modify_price(?, ?));");
-		
-		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
-		ResultSet dateResult=selectDate.executeQuery();
-		ArrayList<String> dates=new ArrayList<>();
-		while (dateResult.next()) 
-			dates.add(dateResult.getString("date"));
-		dateResult.close();
-		selectDate.close();
-		Collections.sort(dates);
-		
-		PreparedStatement updaterestseat=conn.prepareStatement("insert into rest_seat (date, price_id, rest_ticket) values (cast(? as date), ?, ?);");
-		
-		PreparedStatement selectpriceid=conn.prepareStatement("select price_id as pid from price where schedule_id=?;");
-		ResultSet priceidresult=null;
-		
-		ResultSet numofseat=conn.prepareStatement("select count(type_id) as cnt from seat_type").executeQuery();
-		int nseats=-1;
-		while (numofseat.next())
-			nseats=numofseat.getInt("cnt");
-		numofseat.close();
-		
+		temp=conn.prepareStatement("select station_id from station where station_name=?");
 		for (int i=1;i<=n;i++) {
 			System.out.print("第"+i+"站: ");
 			st=scan.next();
 			temp.setString(1, st);
 			rs=temp.executeQuery();
 			while (!rs.next()) {
-				System.out.print("站名错误, 请重新输入: ");
+				System.out.println("站名错误, 请重新输入: ");
 				st=scan.next();
 				temp.setString(1, st);
 				rs.close();
@@ -592,40 +567,12 @@ public class User {
 				stmt.setString(3, dt+":00");
 			else
 				stmt.setString(3, null);
-			stmt.setString(4, tn);
-			stmt.setString(5, st);
+			stmt.setInt(4, new Random().nextInt(100));
+			stmt.setString(5, tn);
+			stmt.setString(6, st);
 			stmt.execute();
-			
-			newidresult=selectnewscheduleid.executeQuery();
-			int newid=-1;
-			while (newidresult.next())
-				newid=newidresult.getInt("newid");
-			updatePrice.setInt(1, newid);
-			updatePrice.setInt(3, newid);
-			for (int j=1;j<=nseats;j++) {
-				updatePrice.setInt(2, j);
-				updatePrice.setInt(4, j);
-				updatePrice.execute();
-			}
-			
-			selectpriceid.setInt(1, newid);
-			
-			for (String date:dates) {
-				priceidresult=selectpriceid.executeQuery();
-				updaterestseat.setString(1, date);
-				while (priceidresult.next()) {
-					updaterestseat.setInt(2, priceidresult.getInt("pid"));
-					updaterestseat.setInt(3, new Random().nextInt(100));
-					updaterestseat.execute();
-				}
-			}
 		}
-		
 		System.out.println("添加成功!");
-		priceidresult.close();
-		selectpriceid.close();
-		selectnewscheduleid.close();
-		newidresult.close();
 		temp.close();
 		stmt.close();
 	}
