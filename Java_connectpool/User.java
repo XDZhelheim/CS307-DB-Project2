@@ -630,4 +630,55 @@ public class User {
 		stmt.close();
 	}
 	
+	public void deleteTrain() throws SQLException {
+		System.out.println("---删除列车---");
+		System.out.print("请输入删除的列车号: ");
+		String tn=scan.next();
+		PreparedStatement temp=conn.prepareStatement("select train_id from train where train_num=?");
+		ResultSet rs=null;
+		temp.setString(1, tn);
+		rs=temp.executeQuery();
+		while (!rs.next()) {
+			System.out.print("列车不存在, 请重新输入: ");
+			tn=scan.next();
+			temp.setString(1, tn);
+			rs.close();
+			rs=temp.executeQuery();
+		}
+		rs.close();
+		
+		String sql="delete from rest_seat where price_id in (select price_id from price where schedule_id in (select schedule_id from inquire_table where train_num=?));";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		sql="delete from price where schedule_id in (select schedule_id from inquire_table where train_num=?);";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		sql="delete from schedule where train_id=(select train_id from train where train_num=?)";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		sql="delete from inquire_table where train_num=?;";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		sql="delete from orders where train_num=?;";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		sql="delete from train where train_num=?;";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.execute();
+		
+		System.out.println("删除成功!");
+		stmt.close();
+	}
+	
 }

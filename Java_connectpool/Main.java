@@ -83,6 +83,7 @@ public class Main {
 			else {
 				while (control==-2) {
 					System.out.println("1. 添加列车");
+					System.out.println("2. 删除列车");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
@@ -90,6 +91,10 @@ public class Main {
 			    	else if (control==1) {
 			    		current_user.addTrain();
 //			    		Thread.sleep(1000);
+			    		control=-2;
+			    	}
+			    	else if (control==2) {
+			    		current_user.deleteTrain();
 			    		control=-2;
 			    	}
 				}
