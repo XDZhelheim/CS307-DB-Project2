@@ -453,13 +453,26 @@ public class User {
 		queryOrder();
 	}
 	
-	public void queryTrainInformation(String train_num) throws SQLException {
+	public void queryTrainInformation() throws SQLException {
+		System.out.print("请输入要查询的列车号: ");
+		String tn=scan.next();
+		PreparedStatement temp=conn.prepareStatement("select train_id from train where train_num=?");
+		ResultSet rs=null;
+		temp.setString(1, tn);
+		rs=temp.executeQuery();
+		while (!rs.next()) {
+			System.out.print("列车不存在, 请重新输入: ");
+			tn=scan.next();
+			temp.setString(1, tn);
+			rs.close();
+			rs=temp.executeQuery();
+		}
 		String sql="select stop_num as num, station_name as sn, depart_time as dt, arrive_time as at from inquire_table where train_num=? order by num";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		int n=0;
 		String sn=null, dt=null, at=null;
-		stmt.setString(1, train_num);
-		ResultSet rs=stmt.executeQuery();
+		stmt.setString(1, tn);
+		rs=stmt.executeQuery();
 		while (rs.next()) {
 			n=rs.getInt("num");
 			sn=rs.getString("sn");
@@ -679,6 +692,168 @@ public class User {
 		
 		System.out.println("删除成功!");
 		stmt.close();
+	}
+	
+	public void insertSchedule() throws SQLException {
+		System.out.println("---插入新站点---");
+		System.out.print("请输入改动的列车号: ");
+		String tn=scan.next();
+		PreparedStatement temp=conn.prepareStatement("select train_id from train where train_num=?");
+		ResultSet rs=null;
+		temp.setString(1, tn);
+		rs=temp.executeQuery();
+		while (!rs.next()) {
+			System.out.print("列车不存在, 请重新输入: ");
+			tn=scan.next();
+			temp.setString(1, tn);
+			rs.close();
+			rs=temp.executeQuery();
+		}
+		
+		String sql="select stop_num as num, station_name as sn, depart_time as dt, arrive_time as at from inquire_table where train_num=? order by num";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		int n=0;
+		String sn=null, dt=null, at=null;
+		stmt.setString(1, tn);
+		rs=stmt.executeQuery();
+		while (rs.next()) {
+			n=rs.getInt("num");
+			sn=rs.getString("sn");
+			dt=rs.getString("dt");
+			at=rs.getString("at");
+			
+			if (dt==null)
+				dt="        ";
+			if (at==null)
+				at="        ";
+			
+			System.out.println("第"+n+"站: "+sn+"\t到达时间: "+at+"\t出发时间: "+dt);
+		}
+		
+		System.out.println("请输入插入站点的位置(第x站前): ");
+		int pos=scan.nextInt();
+		while (pos<=1 || pos>n) {
+			System.out.print("无效编号, 请重新输入: ");
+			pos=scan.nextInt();
+		}
+		
+		conn.prepareStatement("begin;").execute();
+		PreparedStatement updateotherstation=conn.prepareStatement("update schedule set stop_num=stop_num+1 "
+				+ "where train_id=(select train_id from train where train_num=?) and stop_num between ? and (select max(stop_num) from inquire_table where train_num=?);");
+		updateotherstation.setString(1, tn);
+		updateotherstation.setInt(2, pos);
+		updateotherstation.setString(3, tn);
+		updateotherstation.execute();
+		
+		String st=null;
+		at=null; dt=null;
+		sql="insert into schedule (stop_num, arrive_time, depart_time, train_id, station_id) values (?, ?, ?, (select train_id from train where train_num=?), (select station_id from station where station_name=?));";
+		stmt=conn.prepareStatement(sql);
+		temp=conn.prepareStatement("select station_id from station where station_name=?;");
+		
+		PreparedStatement selectnewscheduleid=conn.prepareStatement("select max(schedule_id) as newid from schedule;");
+		ResultSet newidresult=null;
+		PreparedStatement updatePrice=conn.prepareStatement("insert into price (schedule_id, seat_type, price_from_start_station) values (?, ?, modify_price(?, ?));");
+		
+		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
+		ResultSet dateResult=selectDate.executeQuery();
+		ArrayList<String> dates=new ArrayList<>();
+		while (dateResult.next()) 
+			dates.add(dateResult.getString("date"));
+		dateResult.close();
+		selectDate.close();
+		Collections.sort(dates);
+		
+		PreparedStatement updaterestseat=conn.prepareStatement("insert into rest_seat (date, price_id, rest_ticket) values (cast(? as date), ?, ?);");
+		
+		PreparedStatement selectpriceid=conn.prepareStatement("select price_id as pid from price where schedule_id=?;");
+		ResultSet priceidresult=null;
+		
+		ResultSet numofseat=conn.prepareStatement("select count(type_id) as cnt from seat_type").executeQuery();
+		int nseats=-1;
+		while (numofseat.next())
+			nseats=numofseat.getInt("cnt");
+		numofseat.close();
+		
+		System.out.print("请输入站名: ");
+		st=scan.next();
+		temp.setString(1, st);
+		rs=temp.executeQuery();
+		while (!rs.next()) {
+			System.out.print("站名错误, 请重新输入: ");
+			st=scan.next();
+			temp.setString(1, st);
+			rs.close();
+			rs=temp.executeQuery();
+		}
+		rs.close();
+		System.out.print("到达时间 (时:分): ");
+		at=scan.next();
+		int index=at.indexOf(":");
+		int hour=Integer.parseInt(at.substring(0, index));
+		int minute=Integer.parseInt(at.substring(index+1, at.length()));
+		while (hour>24 || minute>59) {
+			System.out.print("无效时间, 请重新输入: ");
+			at=scan.next();
+			index=at.indexOf(":");
+			hour=Integer.parseInt(at.substring(0, index));
+			minute=Integer.parseInt(at.substring(index+1, at.length()));
+		}
+		System.out.print("出发时间 (时:分): ");
+		dt=scan.next();
+		index=dt.indexOf(":");
+		hour=Integer.parseInt(dt.substring(0, index));
+		minute=Integer.parseInt(dt.substring(index+1, dt.length()));
+		while (hour>24 || minute>59) {
+			System.out.print("无效时间, 请重新输入: ");
+			dt=scan.next();
+			index=dt.indexOf(":");
+			hour=Integer.parseInt(dt.substring(0, index));
+			minute=Integer.parseInt(dt.substring(index+1, dt.length()));
+		}
+		
+		stmt.setInt(1, pos);
+		stmt.setString(2, at+":00");
+		stmt.setString(3, dt+":00");
+		stmt.setString(4, tn);
+		stmt.setString(5, st);
+		stmt.execute();
+		
+		newidresult=selectnewscheduleid.executeQuery();
+		int newid=-1;
+		while (newidresult.next())
+			newid=newidresult.getInt("newid");
+		updatePrice.setInt(1, newid);
+		updatePrice.setInt(3, newid);
+		for (int j=1;j<=nseats;j++) {
+			updatePrice.setInt(2, j);
+			updatePrice.setInt(4, j);
+			updatePrice.execute();
+		}
+		
+		selectpriceid.setInt(1, newid);
+		
+		for (String date:dates) {
+			priceidresult=selectpriceid.executeQuery();
+			updaterestseat.setString(1, date);
+			while (priceidresult.next()) {
+				updaterestseat.setInt(2, priceidresult.getInt("pid"));
+				updaterestseat.setInt(3, new Random().nextInt(100));
+				updaterestseat.execute();
+			}
+		}
+		
+		conn.prepareStatement("commit;").execute();
+		stmt.close();
+		temp.close();
+		selectnewscheduleid.close();
+		newidresult.close();
+		selectpriceid.close();
+		priceidresult.close();
+		updateotherstation.close();
+		updatePrice.close();
+		updaterestseat.close();
+		System.out.println("列车信息更新完毕!");
 	}
 	
 }

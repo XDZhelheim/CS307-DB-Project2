@@ -49,9 +49,7 @@ public class Main {
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
-			    		System.out.print("请输入要查询的列车号: ");
-			    		String tn=scan.next();
-			    		current_user.queryTrainInformation(tn);
+			    		current_user.queryTrainInformation();
 //			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
@@ -84,6 +82,7 @@ public class Main {
 				while (control==-2) {
 					System.out.println("1. 添加列车");
 					System.out.println("2. 删除列车");
+					System.out.println("3. 添加列车站点");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
@@ -95,6 +94,10 @@ public class Main {
 			    	}
 			    	else if (control==2) {
 			    		current_user.deleteTrain();
+			    		control=-2;
+			    	}
+			    	else if (control==3) {
+			    		current_user.insertSchedule();
 			    		control=-2;
 			    	}
 				}
