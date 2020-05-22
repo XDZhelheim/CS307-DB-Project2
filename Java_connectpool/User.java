@@ -323,6 +323,8 @@ public class User {
 				System.out.print("请输入身份证号: ");
 				String pid=scan.next();
 				
+				conn.prepareStatement("begin;").execute();
+				
 				String sql="insert into orders (user_name, person_id, train_num, start_station, arrive_station, price, order_date, seat_type_id, depart_time, arrive_time, date_change) "
 						+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
 				PreparedStatement stmt=conn.prepareStatement(sql);
@@ -352,6 +354,9 @@ public class User {
 				stmt.setInt(5, seatnum);
 				stmt.execute();
 				stmt.close();
+				
+				conn.prepareStatement("commit;").execute();
+				
 				System.out.println("订票成功！");
 				queryOrder();
 			}
@@ -431,6 +436,8 @@ public class User {
 		}
 		OrderQuery oq=orders.get(num-1);
 		
+		conn.prepareStatement("begin;").execute();
+		
 		String sql="delete from orders where order_id=?;";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		stmt.setInt(1, oq.getOrder_id());
@@ -449,6 +456,9 @@ public class User {
 		stmt.setString(7, oq.getSeatType());
 		stmt.execute();
 		stmt.close();
+		
+		conn.prepareStatement("commit;").execute();
+		
 		System.out.println("订单已取消！");
 		queryOrder();
 	}
@@ -514,6 +524,9 @@ public class User {
 			System.out.print("类型错误, 请重新输入: ");
 			type=scan.next();
 		}
+		
+		conn.prepareStatement("begin;").execute();
+		
 		String sql="insert into train (train_num, train_type) values (?, ?)";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		stmt.setString(1, tn);
@@ -634,6 +647,8 @@ public class User {
 			}
 		}
 		
+		conn.prepareStatement("commit;").execute();
+		
 		System.out.println("添加成功!");
 		priceidresult.close();
 		selectpriceid.close();
@@ -659,6 +674,8 @@ public class User {
 			rs=temp.executeQuery();
 		}
 		rs.close();
+		
+		conn.prepareStatement("begin;").execute();
 		
 		String sql="delete from rest_seat where price_id in (select price_id from price where schedule_id in (select schedule_id from inquire_table where train_num=?));";
 		PreparedStatement stmt=conn.prepareStatement(sql);
@@ -690,6 +707,8 @@ public class User {
 		stmt.setString(1, tn);
 		stmt.execute();
 		
+		conn.prepareStatement("commit;").execute();
+		
 		System.out.println("删除成功!");
 		stmt.close();
 	}
@@ -716,6 +735,7 @@ public class User {
 		String sn=null, dt=null, at=null;
 		stmt.setString(1, tn);
 		rs=stmt.executeQuery();
+		ArrayList<String> dtimes=new ArrayList<>(), atimes=new ArrayList<>();
 		while (rs.next()) {
 			n=rs.getInt("num");
 			sn=rs.getString("sn");
@@ -727,10 +747,13 @@ public class User {
 			if (at==null)
 				at="        ";
 			
+			dtimes.add(dt.substring(0, 5));
+			atimes.add(at.substring(0, 5));
+			
 			System.out.println("第"+n+"站: "+sn+"\t到达时间: "+at+"\t出发时间: "+dt);
 		}
 		
-		System.out.println("请输入插入站点的位置(第x站前): ");
+		System.out.print("请输入插入站点的位置(第x站前): ");
 		int pos=scan.nextInt();
 		while (pos<=1 || pos>n) {
 			System.out.print("无效编号, 请重新输入: ");
@@ -792,7 +815,7 @@ public class User {
 		int index=at.indexOf(":");
 		int hour=Integer.parseInt(at.substring(0, index));
 		int minute=Integer.parseInt(at.substring(index+1, at.length()));
-		while (hour>24 || minute>59) {
+		while (hour>24 || minute>59 || at.compareTo(dtimes.get(pos-2))<=0) {
 			System.out.print("无效时间, 请重新输入: ");
 			at=scan.next();
 			index=at.indexOf(":");
@@ -804,7 +827,7 @@ public class User {
 		index=dt.indexOf(":");
 		hour=Integer.parseInt(dt.substring(0, index));
 		minute=Integer.parseInt(dt.substring(index+1, dt.length()));
-		while (hour>24 || minute>59) {
+		while (hour>24 || minute>59 || dt.compareTo(atimes.get(pos-1))>=0) {
 			System.out.print("无效时间, 请重新输入: ");
 			dt=scan.next();
 			index=dt.indexOf(":");
@@ -854,6 +877,99 @@ public class User {
 		updatePrice.close();
 		updaterestseat.close();
 		System.out.println("列车信息更新完毕!");
+	}
+	
+	public void deleteSchedule() throws SQLException {
+		System.out.println("---删除站点---");
+		System.out.print("请输入改动的列车号: ");
+		String tn=scan.next();
+		PreparedStatement temp=conn.prepareStatement("select train_id from train where train_num=?");
+		ResultSet rs=null;
+		temp.setString(1, tn);
+		rs=temp.executeQuery();
+		while (!rs.next()) {
+			System.out.print("列车不存在, 请重新输入: ");
+			tn=scan.next();
+			temp.setString(1, tn);
+			rs.close();
+			rs=temp.executeQuery();
+		}
+		rs.close();
+		
+		String sql="select stop_num as num, station_name as sn, depart_time as dt, arrive_time as at from inquire_table where train_num=? order by num";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		int n=0;
+		String sn=null, dt=null, at=null;
+		stmt.setString(1, tn);
+		rs=stmt.executeQuery();
+		ArrayList<String> stations=new ArrayList<>();
+		while (rs.next()) {
+			n=rs.getInt("num");
+			sn=rs.getString("sn");
+			dt=rs.getString("dt");
+			at=rs.getString("at");
+			
+			if (dt==null)
+				dt="        ";
+			if (at==null)
+				at="        ";
+			
+			stations.add(sn);
+			
+			System.out.println("第"+n+"站: "+sn+"\t到达时间: "+at+"\t出发时间: "+dt);
+		}
+		
+		System.out.print("请输入删除的站点序号: ");
+		int pos=scan.nextInt();
+		while (pos<=1 || pos>=n) {
+			System.out.print("无效编号, 请重新输入: ");
+			pos=scan.nextInt();
+		}
+		
+		conn.prepareStatement("begin;").execute();
+		
+		sql="delete from rest_seat where price_id in (select price_id from price where schedule_id=(select schedule_id from inquire_table where train_num=? and stop_num=?));";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setInt(2, pos);
+		stmt.execute();
+		
+		sql="delete from price where schedule_id=(select schedule_id from inquire_table where train_num=? and stop_num=?);";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setInt(2, pos);
+		stmt.execute();
+		
+		sql="delete from schedule where train_id=(select train_id from train where train_num=?) and stop_num=?";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setInt(2, pos);
+		stmt.execute();
+		
+		sql="delete from inquire_table where train_num=? and stop_num=?;";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setInt(2, pos);
+		stmt.execute();
+		
+		sql="delete from orders where train_num=? and (start_station=? or arrive_station=?);";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, tn);
+		stmt.setString(2, stations.get(pos-1));
+		stmt.setString(3, stations.get(pos-1));
+		stmt.execute();
+		
+		PreparedStatement updateotherstation=conn.prepareStatement("update schedule set stop_num=stop_num-1 "
+				+ "where train_id=(select train_id from train where train_num=?) and stop_num between ? and (select max(stop_num) from inquire_table where train_num=?);");
+		updateotherstation.setString(1, tn);
+		updateotherstation.setInt(2, pos+1);
+		updateotherstation.setString(3, tn);
+		updateotherstation.execute();
+		
+		conn.prepareStatement("commit;").execute();
+		
+		System.out.println("删除成功!");
+		stmt.close();
 	}
 	
 }

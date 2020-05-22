@@ -45,12 +45,10 @@ public class Main {
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
 			    		current_user.queryTrain_reserveTicket(start, arrive, false);
-//			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
 			    		current_user.queryTrainInformation();
-//			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
 			    	else if (control==3) {
@@ -59,7 +57,6 @@ public class Main {
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
 			    		current_user.queryTrain_reserveTicket(start, arrive, true);
-//			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
 			    	else if (control==4) {
@@ -68,12 +65,10 @@ public class Main {
 			    		String yn=scan.next();
 		    			if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
 		    				current_user.cancelOrder(true, orderlist);
-//		    			Thread.sleep(1000);
 			    		control=-2;
 			    	}
 			    	else if (control==5) {
 			    		current_user.cancelOrder(false, null);
-//			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
 				}
@@ -83,13 +78,13 @@ public class Main {
 					System.out.println("1. 添加列车");
 					System.out.println("2. 删除列车");
 					System.out.println("3. 添加列车站点");
+					System.out.println("4. 删除列车站点");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
 			    		User.logout();
 			    	else if (control==1) {
 			    		current_user.addTrain();
-//			    		Thread.sleep(1000);
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
@@ -98,6 +93,10 @@ public class Main {
 			    	}
 			    	else if (control==3) {
 			    		current_user.insertSchedule();
+			    		control=-2;
+			    	}
+			    	else if (control==4) {
+			    		current_user.deleteSchedule();
 			    		control=-2;
 			    	}
 				}
