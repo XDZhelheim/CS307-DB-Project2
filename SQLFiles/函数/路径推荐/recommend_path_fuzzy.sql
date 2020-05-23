@@ -1,4 +1,3 @@
---接入别的函数 jdbc不用调用
 create function recommend_path_fuzzy(start_station character varying, arrive_station character varying) returns SETOF path_rough
     language plpgsql
 as
@@ -34,7 +33,6 @@ begin
                          tmpv,
                          tmpi,
                          tmpi,
-                         tmpd,
                          subtract_time_train(t1.depart_time, t2.arrive_time, t1.train_num,
                                              t1.stop_num, t2.stop_num)    as total_time,
                          cast(round(cast(0.8 * (t2.price_from_start_station - t1.price_from_start_station) as
@@ -61,8 +59,6 @@ begin
                          t4.arrive_time                                                 as first_arrive,
                          t3.stop_num,
                          t4.stop_num,
-                         cast(round(cast(0.8 * (t4.price_from_start_station - t3.price_from_start_station) as
-                                        numeric), 2) as double precision),
                          add_time(add_time(subtract_time_train(t3.depart_time, t4.arrive_time, t3.train_num,
                                                                t3.stop_num, t4.stop_num),
                                            subtract_time_train(t1.depart_time, t2.arrive_time, t1.train_num,

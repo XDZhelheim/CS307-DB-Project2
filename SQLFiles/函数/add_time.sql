@@ -1,5 +1,4 @@
-create function add_time(time1 character varying, time2 character varying, check1 varchar,
-                         check2 varchar) returns character varying
+create function add_time(time1 character varying, time2 character varying) returns character varying
     language plpgsql
 as
 $$
@@ -13,9 +12,6 @@ begin
     if result_minute >= 60 then
         result_minute := result_minute - 60;
         result_hour := result_hour + 1;
-    end if;
-    if cast(substr(check1, 1, 2) as int) > cast(substr(check2, 1, 2) as int) then
-        result_hour := result_hour + 24;
     end if;
     return result_hour || ' 小时 ' || result_minute || ' 分钟';
 end;
