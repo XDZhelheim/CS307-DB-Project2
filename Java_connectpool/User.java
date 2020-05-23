@@ -197,6 +197,27 @@ public class User {
 		return resultlist;
 	}
 	
+	public static ArrayList<String> getDates() throws SQLException {
+		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
+		ResultSet dateResult=selectDate.executeQuery();
+		ArrayList<String> dates=new ArrayList<>();
+		while (dateResult.next()) 
+			dates.add(dateResult.getString("date"));
+		dateResult.close();
+		selectDate.close();
+		Collections.sort(dates);
+		return dates;
+	}
+	
+	public static ArrayList<String> getSeats() throws SQLException {
+		ArrayList<String> seats=new ArrayList<>();
+		ResultSet seattypes=conn.prepareStatement("select type_name as tn from seat_type;").executeQuery();
+		while (seattypes.next())
+			seats.add(seattypes.getString("tn"));
+		seattypes.close();
+		return seats;
+	}
+	
 	public void queryTrain_reserveTicket(String start, String arrive, boolean reserve) throws SQLException {
 		ArrayList<TrainQuery> resultlist=getTrainQueryResult(start, arrive);
 		if (resultlist.isEmpty()) {
@@ -207,14 +228,7 @@ public class User {
 		for (int i=0;i<resultlist.size();i++)
 			System.out.println((i+1)+". "+resultlist.get(i));
 		
-		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
-		ResultSet dateResult=selectDate.executeQuery();
-		ArrayList<String> dates=new ArrayList<>();
-		while (dateResult.next()) 
-			dates.add(dateResult.getString("date"));
-		dateResult.close();
-		selectDate.close();
-		Collections.sort(dates);
+		ArrayList<String> dates=getDates();
 		
 		boolean ctrl=true;
 		while (ctrl) {
@@ -548,14 +562,7 @@ public class User {
 		ResultSet newidresult=null;
 		PreparedStatement updatePrice=conn.prepareStatement("insert into price (schedule_id, seat_type, price_from_start_station) values (?, ?, modify_price(?, ?));");
 		
-		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
-		ResultSet dateResult=selectDate.executeQuery();
-		ArrayList<String> dates=new ArrayList<>();
-		while (dateResult.next()) 
-			dates.add(dateResult.getString("date"));
-		dateResult.close();
-		selectDate.close();
-		Collections.sort(dates);
+		ArrayList<String> dates=getDates();
 		
 		PreparedStatement updaterestseat=conn.prepareStatement("insert into rest_seat (date, price_id, rest_ticket) values (cast(? as date), ?, ?);");
 		
@@ -778,14 +785,7 @@ public class User {
 		ResultSet newidresult=null;
 		PreparedStatement updatePrice=conn.prepareStatement("insert into price (schedule_id, seat_type, price_from_start_station) values (?, ?, modify_price(?, ?));");
 		
-		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
-		ResultSet dateResult=selectDate.executeQuery();
-		ArrayList<String> dates=new ArrayList<>();
-		while (dateResult.next()) 
-			dates.add(dateResult.getString("date"));
-		dateResult.close();
-		selectDate.close();
-		Collections.sort(dates);
+		ArrayList<String> dates=getDates();
 		
 		PreparedStatement updaterestseat=conn.prepareStatement("insert into rest_seat (date, price_id, rest_ticket) values (cast(? as date), ?, ?);");
 		
@@ -970,6 +970,1221 @@ public class User {
 		
 		System.out.println("删除成功!");
 		stmt.close();
+	}
+	
+	//-------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	private void reserveRecommendTicket(PathQuery pq) throws SQLException {
+		ArrayList<String> seats=getSeats();
+		
+		System.out.println("请选择第一列车座位类型: ");
+		for (int i=0;i<seats.size();i++)
+			System.out.println((i+1)+". "+seats.get(i));
+		int seatnum1=scan.nextInt();
+		while (seatnum1<1 || seatnum1>seats.size()) {
+			System.out.print("无效编号, 请重新输入: ");
+			seatnum1=scan.nextInt();
+		}
+		
+		int seatnum2=-1;
+		if (pq.second_from_stop!=0) {
+			System.out.println("请选择第二列车座位类型: ");
+			for (int i=0;i<seats.size();i++)
+				System.out.println((i+1)+". "+seats.get(i));
+			seatnum2=scan.nextInt();
+			while (seatnum2<1 || seatnum2>seats.size()) {
+				System.out.print("无效编号, 请重新输入: ");
+				seatnum2=scan.nextInt();
+			}
+		}
+		
+		System.out.print("请输入身份证号: ");
+		String pid=scan.next();
+		
+		conn.prepareStatement("begin;").execute();
+		
+		String sql="insert into orders (user_name, person_id, train_num, start_station, arrive_station, price, order_date, seat_type_id, depart_time, arrive_time, date_change) "
+				+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
+		PreparedStatement stmt=conn.prepareStatement(sql);
+		stmt.setString(1, this.name);
+		stmt.setString(2, pid);
+		
+		stmt.setString(3, pq.first_train_num);
+		stmt.setString(4, pq.first_from_name);
+		stmt.setString(5, pq.first_to_name);
+		if (seatnum1==1)
+			stmt.setDouble(6, pq.first_price1);
+		else if (seatnum1==2)
+			stmt.setDouble(6, pq.first_price2);
+		else if (seatnum1==3)
+			stmt.setDouble(6, pq.first_price3);
+		else if (seatnum1==4)
+			stmt.setDouble(6, pq.first_price4);
+		stmt.setString(7, pq.date);
+		stmt.setInt(8, seatnum1);
+		stmt.setString(9, pq.first_depart);
+		stmt.setString(10, pq.first_arrive);
+		stmt.setInt(11, pq.datechange1);
+		try {
+			stmt.execute();
+		} catch (SQLException e) {
+			System.out.println("身份证号无效");
+			return;
+		}
+		
+		if (pq.second_from_stop!=0) {
+			stmt.setString(3, pq.second_train_num);
+			stmt.setString(4, pq.first_to_name);
+			stmt.setString(5, pq.second_to_name);
+			if (seatnum2==1)
+				stmt.setDouble(6, pq.second_price1);
+			else if (seatnum2==2)
+				stmt.setDouble(6, pq.second_price2);
+			else if (seatnum2==3)
+				stmt.setDouble(6, pq.second_price3);
+			else if (seatnum2==4)
+				stmt.setDouble(6, pq.second_price4);
+			stmt.setString(7, pq.date);
+			stmt.setInt(8, seatnum2);
+			stmt.setString(9, pq.second_depart);
+			stmt.setString(10, pq.second_arrive);
+			stmt.setInt(11, pq.datechange2);
+			try {
+				stmt.execute();
+			} catch (SQLException e) {
+				System.out.println("身份证号无效");
+				return;
+			}
+		}
+		
+		sql="select subtract_seat(cast(? as date), ?, ?, ?, ?);";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, pq.date);
+		
+		stmt.setString(2, pq.first_train_num);
+		stmt.setInt(3, pq.first_from_stop);
+		stmt.setInt(4, pq.first_to_stop);
+		stmt.setInt(5, seatnum1);
+		stmt.execute();
+		
+		if (pq.second_from_stop!=0) {
+			stmt.setString(2, pq.second_train_num);
+			stmt.setInt(3, pq.second_from_stop);
+			stmt.setInt(4, pq.second_to_stop);
+			stmt.setInt(5, seatnum2);
+			stmt.execute();
+		}
+		
+		stmt.close();
+		
+		conn.prepareStatement("commit;").execute();
+		
+		System.out.println("订票成功！");
+		queryOrder();
+	}
+	
+	public void accurateSearchLowestPrice() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from accurate_path_lowest_price(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最低票价, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void accurateSearchMinTransfer() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from accurate_path_minimum_transfer(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最少换乘, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void accurateSearchShortestTime() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from accurate_path_shortest_time(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最短用时, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void accurateSearchRecommend() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from accurate_path_recommend(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("系统推荐路线, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void fuzzySearchLowestPrice() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from fuzzy_path_lowest_price(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最低票价, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void fuzzySearchMinTransfer() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from fuzzy_path_minimum_transfer(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最少换乘, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void fuzzySearchShortestTime() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from fuzzy_path_shortest_time(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("最短用时, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
+	}
+	
+	public void fuzzySearchRecommend() throws SQLException {
+		System.out.print("请输入出发站: ");
+		String start=scan.next();
+		System.out.print("请输入到达站: ");
+		String arrive=scan.next();
+		
+		System.out.println("请选择日期: ");
+		ArrayList<String> dates=getDates();
+		for (int i=0;i<dates.size();i++) 
+			System.out.println((i+1)+". "+dates.get(i));
+		int datenum=scan.nextInt();
+		String date=dates.get(datenum-1);
+		
+		PreparedStatement aplp=conn.prepareStatement("select * from fuzzy_path_recommend(cast(? as date), ?, ?, ?);");
+		ResultSet rs=null;
+		aplp.setString(1, date);
+		aplp.setString(2, start);
+		aplp.setString(3, arrive);
+		
+		
+		String first_train_num=null, first_train_type=null, first_from_name=null, first_to_name=null;
+		int first_from_stop=-1, first_to_stop=-1;
+		String first_depart=null, first_arrive=null;
+		int first_seat1=-1, first_seat2=-1, first_seat3=-1, first_seat4=-1;
+		double first_price1=-1, first_price2=-1, first_price3=-1, first_price4=-1;
+		
+		String second_train_num=null, second_train_type=null, second_to_name=null;
+		int second_from_stop=-1, second_to_stop=-1;
+		String second_depart=null, second_arrive=null;
+		int second_seat1=-1, second_seat2=-1, second_seat3=-1, second_seat4=-1;
+		double second_price1=-1, second_price2=-1, second_price3=-1, second_price4=-1;
+		
+		int datechange1=-1, datechange2=-1;
+		
+		String total_time=null;
+		double total_lowest_price=-1;
+		
+		int page=1;
+		while (page!=0) {
+			ArrayList<PathQuery> pathlist=null;
+			
+			aplp.setInt(4, page);
+			pathlist=new ArrayList<>();
+			rs=aplp.executeQuery();
+			PreparedStatement selectDateChange=conn.prepareStatement("select date_change(?, ?, ?) as dc;");
+			ResultSet datechangeresult=null;
+			while (rs.next()) {
+				first_train_num=rs.getString("first_train_num");
+				first_train_type=rs.getString("first_train_type");
+				first_from_name=rs.getString("first_from_name");
+				first_to_name=rs.getString("first_to_name");
+				first_from_stop=rs.getInt("first_from_stop");
+				first_to_stop=rs.getInt("first_to_stop");
+				first_depart=rs.getString("first_depart");
+				first_arrive=rs.getString("first_arrive");
+				first_seat1=rs.getInt("first_seat1");
+				first_seat2=rs.getInt("first_seat2");
+				first_seat3=rs.getInt("first_seat3");
+				first_seat4=rs.getInt("first_seat4");
+				first_price1=rs.getDouble("first_price1");
+				first_price2=rs.getDouble("first_price2");
+				first_price3=rs.getDouble("first_price3");
+				first_price4=rs.getDouble("first_price4");
+				
+				selectDateChange.setString(1, first_train_num);
+				selectDateChange.setInt(2, first_from_stop);
+				selectDateChange.setInt(3, first_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange1=datechangeresult.getInt("dc");
+				
+				second_train_num=rs.getString("second_train_num");
+				second_train_type=rs.getString("second_train_type");
+				second_to_name=rs.getString("second_to_name");
+				second_from_stop=rs.getInt("second_from_stop");
+				second_to_stop=rs.getInt("second_to_stop");
+				second_depart=rs.getString("second_leave");
+				second_arrive=rs.getString("second_arrive");
+				second_seat1=rs.getInt("second_seat1");
+				second_seat2=rs.getInt("second_seat2");
+				second_seat3=rs.getInt("second_seat3");
+				second_seat4=rs.getInt("second_seat4");
+				second_price1=rs.getDouble("second_price1");
+				second_price2=rs.getDouble("second_price2");
+				second_price3=rs.getDouble("second_price3");
+				second_price4=rs.getDouble("second_price4");
+				
+				selectDateChange.setString(1, second_train_num);
+				selectDateChange.setInt(2, second_from_stop);
+				selectDateChange.setInt(3, second_to_stop);
+				datechangeresult=selectDateChange.executeQuery();
+				while (datechangeresult.next())
+					datechange2=datechangeresult.getInt("dc");
+				
+				total_time=rs.getString("total_time");
+				total_lowest_price=rs.getDouble("total_lowest_price");
+				
+				pathlist.add(new PathQuery(date, datechange1, datechange2, first_train_num, first_train_type, first_from_name, first_to_name, first_from_stop, first_to_stop, first_depart, first_arrive, first_seat1, first_seat2, first_seat3, first_seat4, first_price1, first_price2, first_price3, first_price4, 
+						second_train_num, second_train_type, second_to_name, second_from_stop, second_to_stop, second_depart, second_arrive, second_seat1, second_seat2, second_seat3, second_seat4, second_price1, second_price2, second_price3, second_price4, total_time, total_lowest_price));
+			}
+			
+			if (pathlist.isEmpty())
+				System.out.println("本页无信息");
+			else {
+				System.out.println("(第"+page+"页)");
+				System.out.println("系统推荐路线, 为您查询到以下线路: ");
+				for (int i=0;i<pathlist.size();i++) {
+					System.out.println("路线"+(i+1)+":");
+					System.out.println(pathlist.get(i));
+					System.out.println();
+				}
+				
+				boolean ctrl=true;
+				while (ctrl) {
+					System.out.print("请选择路线编号查看详细信息: ");
+					int num=scan.nextInt();
+					while (num<1 || num>pathlist.size()) {
+						System.out.print("无效编号, 请重新输入: ");
+						num=scan.nextInt();
+					}
+					PathQuery pq=pathlist.get(num-1);
+					pq.showDetail();
+					
+					System.out.print("是否需要订票? (y/n) ");
+					String yn=scan.next();
+					if (yn.equalsIgnoreCase("y") || yn.equalsIgnoreCase("yes"))
+						reserveRecommendTicket(pq);
+					
+					System.out.print("查看其他车次? (y/n) ");
+					String ctr=scan.next();
+					ctrl=ctr.equalsIgnoreCase("y") || ctr.equalsIgnoreCase("yes");
+				}
+			}
+			System.out.print("请输入跳转的页数 (0表示退出): ");
+			page=scan.nextInt();
+		}
 	}
 	
 }

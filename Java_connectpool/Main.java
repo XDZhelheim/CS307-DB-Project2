@@ -35,6 +35,7 @@ public class Main {
 			    	System.out.println("3. 订票");
 			    	System.out.println("4. 查询订单");
 			    	System.out.println("5. 取消订单");
+			    	System.out.println("6. 查询推荐路线");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
@@ -70,6 +71,38 @@ public class Main {
 			    	else if (control==5) {
 			    		current_user.cancelOrder(false, null);
 			    		control=-2;
+			    	}
+			    	else if (control==6) {
+			    		System.out.println("1. 精确查找");
+			    		System.out.println("2. 模糊查找");
+			    		int ct1=scan.nextInt();
+		    			System.out.println("1. 最低费用");
+		    			System.out.println("2. 最少换乘");
+		    			System.out.println("3. 最短用时");
+		    			System.out.println("4. 系统推荐");
+		    			int ct2=scan.nextInt();
+		    			if (ct1==1) {
+		    				if (ct2==1)
+		    					current_user.accurateSearchLowestPrice();
+		    				if (ct2==2)
+		    					current_user.accurateSearchMinTransfer();
+		    				if (ct2==3)
+		    					current_user.accurateSearchShortestTime();
+		    				if (ct2==4)
+		    					current_user.accurateSearchRecommend();
+		    			}
+		    			else if (ct1==2) {
+		    				if (ct2==1)
+		    					current_user.fuzzySearchLowestPrice();
+		    				if (ct2==2)
+		    					current_user.fuzzySearchMinTransfer();
+		    				if (ct2==3)
+		    					current_user.fuzzySearchShortestTime();
+		    				if (ct2==4)
+		    					current_user.fuzzySearchRecommend();
+		    			}
+		    			
+		    			control=-2;
 			    	}
 				}
 			}
