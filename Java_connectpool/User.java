@@ -250,7 +250,7 @@ public class User {
 			ResultSet typeResult=null;
 			String type=null;
 			double pr=-1;
-			PreparedStatement selectPrice=conn.prepareStatement("select p2.pr-p1.pr as pr from (select price_from_start_station as pr from price where schedule_id=? and seat_type=?) as p1 "
+			PreparedStatement selectPrice=conn.prepareStatement("select round(cast(p2.pr-p1.pr as numeric), 2) as pr from (select price_from_start_station as pr from price where schedule_id=? and seat_type=?) as p1 "
 					+ "cross join (select price_from_start_station as pr from price where schedule_id=? and seat_type=?) as p2");
 			selectPrice.setInt(1, tq.getSid1());
 			selectPrice.setInt(3, tq.getSid2());
@@ -274,6 +274,7 @@ public class User {
 				priceResult=selectPrice.executeQuery();
 				while (priceResult.next())
 					pr=priceResult.getDouble("pr");
+				
 				
 				System.out.print("\t"+type+": "+pr);
 				seat_price.add(pr);
