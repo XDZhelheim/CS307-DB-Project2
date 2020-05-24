@@ -82,7 +82,7 @@ begin
             end if;
         end loop;
 
-    if (select *
+    if (select max(order_id)
         from orders
         where person_id = new.person_id
           and order_date = new.order_date
@@ -90,7 +90,7 @@ begin
     then
         raise exception 'wrong';
     end if;
-
+return new;
 end;
 $$;
 
