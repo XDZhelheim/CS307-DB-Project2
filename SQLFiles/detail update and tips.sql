@@ -127,7 +127,7 @@ create index stop_num_index on inquire_table (stop_num);
 
 --检查订票是否合法
 create trigger check_order_trigger
-    before delete
+    before insert
     on orders
     for each row
 execute procedure check_order();
