@@ -1,0 +1,1 @@
+alter table rest_seat add constraint check0 check (rest_ticket>=0);

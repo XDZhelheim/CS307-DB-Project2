@@ -53,7 +53,7 @@ public class User {
 			
 			stmt=conn.prepareStatement("select type from users where user_name=? and password=?;");
 			stmt.setString(1, name);
-			stmt.setString(2, pw);
+			stmt.setInt(2, pw.hashCode());
 			
 			rs=stmt.executeQuery();
 			if (!rs.next()) {
@@ -111,7 +111,7 @@ public class User {
 			
 			stmt=conn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
 			stmt.setString(1, name);
-			stmt.setString(2, pw);
+			stmt.setInt(2, pw.hashCode());
 			try {
 				stmt.execute();
 			}
@@ -334,31 +334,38 @@ public class User {
 					seatnum=scan.nextInt();
 				}
 				
-				System.out.print("请输入身份证号: ");
-				String pid=scan.next();
-				
-				conn.prepareStatement("begin;").execute();
-				
 				String sql="insert into orders (user_name, person_id, train_num, start_station, arrive_station, price, order_date, seat_type_id, depart_time, arrive_time, date_change) "
 						+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
 				PreparedStatement stmt=conn.prepareStatement(sql);
-				stmt.setString(1, this.name);
-				stmt.setString(2, pid);
-				stmt.setString(3, tq.getTrain_num());
-				stmt.setString(4, tq.getDepart_station());
-				stmt.setString(5, tq.getArrive_station());
-				stmt.setDouble(6, seat_price.get(seatnum-1));
-				stmt.setString(7, dates.get(datenum-1));
-				stmt.setInt(8, seatnum);
-				stmt.setString(9, tq.getDepart_time());
-				stmt.setString(10, tq.getArrive_time());
-				stmt.setInt(11, tq.getDateChange());
-				try {
-					stmt.execute();
-				} catch (SQLException e) {
-					System.out.println("身份证号无效");
-					return;
+				
+				boolean idcontrol=true;
+				while (idcontrol) {
+					System.out.print("请输入身份证号: ");
+					String pid=scan.next();
+					
+					conn.prepareStatement("begin;").execute();
+					
+					stmt.setString(1, this.name);
+					stmt.setString(2, pid);
+					stmt.setString(3, tq.getTrain_num());
+					stmt.setString(4, tq.getDepart_station());
+					stmt.setString(5, tq.getArrive_station());
+					stmt.setDouble(6, seat_price.get(seatnum-1));
+					stmt.setString(7, dates.get(datenum-1));
+					stmt.setInt(8, seatnum);
+					stmt.setString(9, tq.getDepart_time());
+					stmt.setString(10, tq.getArrive_time());
+					stmt.setInt(11, tq.getDateChange());
+					try {
+						stmt.execute();
+						idcontrol=false;
+					} catch (SQLException e) {
+						System.out.println("身份证号无效");
+						conn.prepareStatement("rollback;").execute();
+						idcontrol=true;
+					}
 				}
+				
 				sql="select subtract_seat(cast(? as date), ?, ?, ?, ?);";
 				stmt=conn.prepareStatement(sql);
 				stmt.setString(1, dates.get(datenum-1));
@@ -366,13 +373,22 @@ public class User {
 				stmt.setInt(3, tq.getStop1());
 				stmt.setInt(4, tq.getStop2());
 				stmt.setInt(5, seatnum);
-				stmt.execute();
+				boolean flag=true;
+				try {
+					stmt.execute();
+				}
+				catch (SQLException e) {
+					System.out.println("无余票, 订票失败！");
+					flag=false;
+				}
 				stmt.close();
 				
 				conn.prepareStatement("commit;").execute();
 				
-				System.out.println("订票成功！");
-				queryOrder();
+				if (flag) {
+					System.out.println("订票成功！");
+					queryOrder();
+				}
 			}
 			System.out.print("查看其他列车? (y/n) ");
 			String ctr=scan.next();
@@ -998,62 +1014,63 @@ public class User {
 			}
 		}
 		
-		System.out.print("请输入身份证号: ");
-		String pid=scan.next();
-		
-		conn.prepareStatement("begin;").execute();
-		
 		String sql="insert into orders (user_name, person_id, train_num, start_station, arrive_station, price, order_date, seat_type_id, depart_time, arrive_time, date_change) "
 				+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
 		PreparedStatement stmt=conn.prepareStatement(sql);
-		stmt.setString(1, this.name);
-		stmt.setString(2, pid);
 		
-		stmt.setString(3, pq.first_train_num);
-		stmt.setString(4, pq.first_from_name);
-		stmt.setString(5, pq.first_to_name);
-		if (seatnum1==1)
-			stmt.setDouble(6, pq.first_price1);
-		else if (seatnum1==2)
-			stmt.setDouble(6, pq.first_price2);
-		else if (seatnum1==3)
-			stmt.setDouble(6, pq.first_price3);
-		else if (seatnum1==4)
-			stmt.setDouble(6, pq.first_price4);
-		stmt.setString(7, pq.date);
-		stmt.setInt(8, seatnum1);
-		stmt.setString(9, pq.first_depart);
-		stmt.setString(10, pq.first_arrive);
-		stmt.setInt(11, pq.datechange1);
-		try {
-			stmt.execute();
-		} catch (SQLException e) {
-			System.out.println("身份证号无效");
-			return;
-		}
-		
-		if (pq.second_from_stop!=0) {
-			stmt.setString(3, pq.second_train_num);
-			stmt.setString(4, pq.first_to_name);
-			stmt.setString(5, pq.second_to_name);
-			if (seatnum2==1)
-				stmt.setDouble(6, pq.second_price1);
-			else if (seatnum2==2)
-				stmt.setDouble(6, pq.second_price2);
-			else if (seatnum2==3)
-				stmt.setDouble(6, pq.second_price3);
-			else if (seatnum2==4)
-				stmt.setDouble(6, pq.second_price4);
+		boolean idctrl=true;
+		while (idctrl) {
+			System.out.print("请输入身份证号: ");
+			String pid=scan.next();
+			
+			conn.prepareStatement("begin;").execute();
+			
+			stmt.setString(1, this.name);
+			stmt.setString(2, pid);
+			
+			stmt.setString(3, pq.first_train_num);
+			stmt.setString(4, pq.first_from_name);
+			stmt.setString(5, pq.first_to_name);
+			if (seatnum1==1)
+				stmt.setDouble(6, pq.first_price1);
+			else if (seatnum1==2)
+				stmt.setDouble(6, pq.first_price2);
+			else if (seatnum1==3)
+				stmt.setDouble(6, pq.first_price3);
+			else if (seatnum1==4)
+				stmt.setDouble(6, pq.first_price4);
 			stmt.setString(7, pq.date);
-			stmt.setInt(8, seatnum2);
-			stmt.setString(9, pq.second_depart);
-			stmt.setString(10, pq.second_arrive);
-			stmt.setInt(11, pq.datechange2);
+			stmt.setInt(8, seatnum1);
+			stmt.setString(9, pq.first_depart);
+			stmt.setString(10, pq.first_arrive);
+			stmt.setInt(11, pq.datechange1);
 			try {
 				stmt.execute();
+				idctrl=false;
 			} catch (SQLException e) {
 				System.out.println("身份证号无效");
-				return;
+				conn.prepareStatement("rollback;").execute();
+				idctrl=true;
+			}
+			
+			if (pq.second_from_stop!=0) {
+				stmt.setString(3, pq.second_train_num);
+				stmt.setString(4, pq.first_to_name);
+				stmt.setString(5, pq.second_to_name);
+				if (seatnum2==1)
+					stmt.setDouble(6, pq.second_price1);
+				else if (seatnum2==2)
+					stmt.setDouble(6, pq.second_price2);
+				else if (seatnum2==3)
+					stmt.setDouble(6, pq.second_price3);
+				else if (seatnum2==4)
+					stmt.setDouble(6, pq.second_price4);
+				stmt.setString(7, pq.date);
+				stmt.setInt(8, seatnum2);
+				stmt.setString(9, pq.second_depart);
+				stmt.setString(10, pq.second_arrive);
+				stmt.setInt(11, pq.datechange2);
+				stmt.execute();
 			}
 		}
 		
@@ -1065,22 +1082,37 @@ public class User {
 		stmt.setInt(3, pq.first_from_stop);
 		stmt.setInt(4, pq.first_to_stop);
 		stmt.setInt(5, seatnum1);
-		stmt.execute();
+		boolean flag=true;
+		try {
+			stmt.execute();
+		}
+		catch (SQLException e) {
+			System.out.println("无余票, 订票失败！");
+			flag=false;
+		}
 		
-		if (pq.second_from_stop!=0) {
+		if (pq.second_from_stop!=0 && flag) {
 			stmt.setString(2, pq.second_train_num);
 			stmt.setInt(3, pq.second_from_stop);
 			stmt.setInt(4, pq.second_to_stop);
 			stmt.setInt(5, seatnum2);
-			stmt.execute();
+			try {
+				stmt.execute();
+			}
+			catch (SQLException e) {
+				System.out.println("无余票, 订票失败！");
+				flag=false;
+			}
 		}
 		
 		stmt.close();
 		
 		conn.prepareStatement("commit;").execute();
 		
-		System.out.println("订票成功！");
-		queryOrder();
+		if (flag) {
+			System.out.println("订票成功！");
+			queryOrder();
+		}
 	}
 	
 	public void accurateSearchLowestPrice() throws SQLException {

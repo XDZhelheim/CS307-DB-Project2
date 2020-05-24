@@ -7,4 +7,10 @@ create table users (
     check (type in('A', 'P'))
 );
 
-insert into users (user_name, password, type) values ('default_admin', '666666', 'A');
+alter table users drop column password;
+
+alter table users add column password int;
+
+update users set password=96426 where user_name='adm';
+
+update users set password=97 where user_name='a';
