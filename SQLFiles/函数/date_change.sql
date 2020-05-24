@@ -1,5 +1,4 @@
---用于判断从出发站到终点站跨了几天 返回天数
-create function date_change( tra_num character varying, stop1 integer, stop2 integer) returns integer
+create function date_change(tra_num character varying, stop1 integer, stop2 integer) returns integer
     language plpgsql
 as
 $$
@@ -11,7 +10,7 @@ declare
     stoptmp2 int;
 begin
     change = 0;
-    stoptmp1 = stop2;
+    stoptmp1 = stop2 + 1;
     select depart_time into tmp1 from inquire_table v where v.train_num = tra_num and v.stop_num = stop1;
     for i in stop1 + 1..stop2
         loop
@@ -27,11 +26,11 @@ begin
             end if;
             tmp1 = tmp2;
         end loop;
-    if stoptmp1 = stop2 then
+    if stoptmp1 = stop2 + 1 then
         return change;
     end if;
     change = 1;
-    stoptmp2 = stop2;
+    stoptmp2 = stop2 + 1;
     select depart_time into tmp1 from inquire_table v where v.train_num = tra_num and v.stop_num = stoptmp1 + 1;
     for i in stoptmp1 + 1..stop2
         loop
@@ -47,8 +46,8 @@ begin
             end if;
             tmp1 = tmp2;
         end loop;
-    if stoptmp2 = stop2 then
-        return  change;
+    if stoptmp2 = stop2 + 1 then
+        return change;
     end if;
     change = 2;
     return change;
