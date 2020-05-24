@@ -4,20 +4,12 @@ import java.sql.*;
 import java.util.*;
 
 public class User {
-	static final String driver="org.postgresql.Driver";
-    static final String host = "localhost";
-    static final String dbname = "project_12306";
-    static final String user = "checker";
-    static final String password = "201205";
-    static final String port = "6666";
-    static final String url = "jdbc:postgresql://" + host + ":" + port + "/" + dbname;
     static Connection conn=null;
     static Scanner scan=new Scanner(System.in);
     
     static {
     	try {
-			Class.forName(driver);
-			conn=DriverManager.getConnection(url, user, password);
+    		conn=ProxoolConnectionPool.connector.getConn();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
