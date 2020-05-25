@@ -2,6 +2,7 @@ package Project2_12306;
 
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 public class User {
     static Scanner scan=new Scanner(System.in);
@@ -210,9 +211,19 @@ public class User {
 		return seats;
 	}
 	
-	public void queryTrain_reserveTicket(String start, String arrive, boolean reserve) throws SQLException {
+	public void queryTrain_reserveTicket(String username,String start, String arrive, boolean reserve) throws SQLException {
 		ArrayList<TrainQuery> resultlist=getTrainQueryResult(start, arrive);
-		if (resultlist.isEmpty()) {
+		try {
+			PreparedStatement s = sconn.prepareStatement("insert into log values (?,?,'reserve ticket')");
+			Date date = new Date();
+			Timestamp ts = new Timestamp(date.getTime());
+			s.setTimestamp(1, ts);
+			s.setString(2, username);
+			s.execute();
+		} catch (SQLException e) {
+			System.out.println("错误：操作过频繁");
+			return;
+		}if (resultlist.isEmpty()) {
 			System.out.println("无车次，请检查出发地与到达地！");
 			return;
 		}

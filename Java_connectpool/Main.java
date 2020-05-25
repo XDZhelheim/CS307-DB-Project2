@@ -44,7 +44,7 @@ public class Main {
 			    		String start=scan.next();
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
-			    		current_user.queryTrain_reserveTicket(start, arrive, false);
+			    		current_user.queryTrain_reserveTicket(current_user.start, arrive, false);
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
@@ -56,7 +56,7 @@ public class Main {
 			    		String start=scan.next();
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
-			    		current_user.queryTrain_reserveTicket(start, arrive, true);
+			    		current_user.queryTrain_reserveTicket(current_user.start, arrive, true);
 			    		control=-2;
 			    	}
 			    	else if (control==4) {
