@@ -15,6 +15,7 @@ Anything outside the "proxool" tag is ignored. -->
         <minimum-connection-count>5</minimum-connection-count>
         <maximum-connection-count>1200</maximum-connection-count>
         <simultaneous-build-throttle>1200</simultaneous-build-throttle>
+        <maximum-active-time>1200000</maximum-active-time>
 
     </proxool>
 </something-else-entirely>

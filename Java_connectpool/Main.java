@@ -44,7 +44,7 @@ public class Main {
 			    		String start=scan.next();
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
-			    		current_user.queryTrain_reserveTicket(current_user.start, arrive, false);
+			    		current_user.queryTrain_reserveTicket(start, arrive, false);
 			    		control=-2;
 			    	}
 			    	else if (control==2) {
@@ -56,7 +56,7 @@ public class Main {
 			    		String start=scan.next();
 			    		System.out.print("请输入到达站: ");
 			    		String arrive=scan.next();
-			    		current_user.queryTrain_reserveTicket(current_user.start, arrive, true);
+			    		current_user.queryTrain_reserveTicket(start, arrive, true);
 			    		control=-2;
 			    	}
 			    	else if (control==4) {
@@ -111,6 +111,8 @@ public class Main {
 					System.out.println("2. 删除列车");
 					System.out.println("3. 添加列车站点");
 					System.out.println("4. 删除列车站点");
+					System.out.println("5. 查询单列车");
+					System.out.println("6. 更新日期");
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
@@ -129,6 +131,14 @@ public class Main {
 			    	}
 			    	else if (control==4) {
 			    		current_user.deleteSchedule();
+			    		control=-2;
+			    	}
+			    	else if (control==5) {
+			    		current_user.queryTrainInformation();
+			    		control=-2;
+			    	}
+			    	else if (control==6) {
+			    		current_user.updateDate();
 			    		control=-2;
 			    	}
 				}

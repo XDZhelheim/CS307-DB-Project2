@@ -211,19 +211,20 @@ public class User {
 		return seats;
 	}
 	
-	public void queryTrain_reserveTicket(String username,String start, String arrive, boolean reserve) throws SQLException {
+	public void queryTrain_reserveTicket(String start, String arrive, boolean reserve) throws SQLException {
 		ArrayList<TrainQuery> resultlist=getTrainQueryResult(start, arrive);
 		try {
 			PreparedStatement s = sconn.prepareStatement("insert into log values (?,?,'reserve ticket')");
 			Date date = new Date();
 			Timestamp ts = new Timestamp(date.getTime());
 			s.setTimestamp(1, ts);
-			s.setString(2, username);
+			s.setString(2, this.name);
 			s.execute();
 		} catch (SQLException e) {
 			System.out.println("错误：操作过频繁");
 			return;
-		}if (resultlist.isEmpty()) {
+		}
+		if (resultlist.isEmpty()) {
 			System.out.println("无车次，请检查出发地与到达地！");
 			return;
 		}
@@ -1003,6 +1004,10 @@ public class User {
 		stmt.close();
 	}
 	
+	public void updateDate() throws SQLException {
+		conn.prepareStatement("call update_date();").execute();
+	}
+	
 	//-------------------------------------------------------------------------------------------------------------------------------------------------
 	
 	private void reserveRecommendTicket(PathQuery pq) throws SQLException {
@@ -1051,6 +1056,8 @@ public class User {
 				idcontrol=checkidresult.getBoolean("vc");
 		}
 		
+		boolean datechanged=pq.first_arrive.compareTo(pq.second_depart)>0;
+		
 		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		
 		stmt.setString(1, this.name);
@@ -1075,8 +1082,8 @@ public class User {
 		try {
 			stmt.execute();
 		} catch (SQLException e) {
+			e.printStackTrace();
 			System.out.println("订票失败，请检查时间冲突！");
-			conn.prepareStatement("rollback;").execute();
 		}
 		
 		if (pq.second_from_stop!=0) {
@@ -1092,6 +1099,14 @@ public class User {
 			else if (seatnum2==4)
 				stmt.setDouble(6, pq.second_price4);
 			stmt.setString(7, pq.date);
+			if (datechanged) {
+				int day=Integer.parseInt(pq.date.toString().substring(8, 10));
+				day++;
+				if (day<10)
+					stmt.setString(7, pq.date.toString().substring(0, 9)+day);
+				else
+					stmt.setString(7, pq.date.toString().substring(0, 8)+day);
+			}
 			stmt.setInt(8, seatnum2);
 			stmt.setString(9, pq.second_depart);
 			stmt.setString(10, pq.second_arrive);
@@ -1100,7 +1115,6 @@ public class User {
 				stmt.execute();
 			} catch (SQLException e) {
 				System.out.println("订票失败，请检查时间冲突！");
-				conn.prepareStatement("rollback;").execute();
 			}
 		}
 		
