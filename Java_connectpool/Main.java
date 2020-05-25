@@ -7,7 +7,6 @@ public class Main {
 	static Scanner scan=new Scanner(System.in);
 	static User current_user=null;
 	static int control=-1;
-	static ArrayList<TrainQuery> trainlist=null;
 	static ArrayList<OrderQuery> orderlist=null;
 	
     public static void main(String[] args) throws Exception {
@@ -39,7 +38,7 @@ public class Main {
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
-			    		User.logout();
+			    		current_user.logout();
 			    	else if (control==1) {
 			    		System.out.print("请输入出发站: ");
 			    		String start=scan.next();
@@ -115,7 +114,7 @@ public class Main {
 			    	System.out.println("0. 注销");
 			    	control=scan.nextInt();
 			    	if (control==0)
-			    		User.logout();
+			    		current_user.logout();
 			    	else if (control==1) {
 			    		current_user.addTrain();
 			    		control=-2;

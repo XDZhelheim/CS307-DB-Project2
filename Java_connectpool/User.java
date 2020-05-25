@@ -4,16 +4,10 @@ import java.sql.*;
 import java.util.*;
 
 public class User {
-    static Connection conn=null;
     static Scanner scan=new Scanner(System.in);
+    static Connection sconn=ProxoolConnectionPool.connector.getConn();
     
-    static {
-    	try {
-    		conn=ProxoolConnectionPool.connector.getConn();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-    }
+    private Connection conn;
     
     enum UserType {ADMIN, PASSENGER}
     private String name;
@@ -22,6 +16,11 @@ public class User {
     public User(String name, UserType type) {
     	this.name=name;
     	this.type=type;
+    	try {
+    		conn=ProxoolConnectionPool.connector.getConn();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
     }
 
 	public String getName() {
@@ -43,7 +42,7 @@ public class User {
 			System.out.print("密码：");
 			pw=scan.next();
 			
-			stmt=conn.prepareStatement("select type from users where user_name=? and password=?;");
+			stmt=sconn.prepareStatement("select type from users where user_name=? and password=?;");
 			stmt.setString(1, name);
 			stmt.setInt(2, pw.hashCode());
 			
@@ -75,7 +74,7 @@ public class User {
 			while (control2) {
 				System.out.print("请输入用户名：");
 				name=scan.next();
-				stmt=conn.prepareStatement("select 1 from users where user_name='"+name+"';");
+				stmt=sconn.prepareStatement("select 1 from users where user_name='"+name+"';");
 				ResultSet rs=stmt.executeQuery();
 				if (rs.next()) {
 					System.out.println("用户名重复，请重试");
@@ -101,7 +100,7 @@ public class User {
 					control3=false;
 			}
 			
-			stmt=conn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
+			stmt=sconn.prepareStatement("insert into users (user_name, password, type) values (?, ?, 'P');");
 			stmt.setString(1, name);
 			stmt.setInt(2, pw.hashCode());
 			try {
@@ -119,17 +118,18 @@ public class User {
 	}
 	
 	public static void closeConnection() throws SQLException {
-		conn.close();
+		sconn.close();
 	}
 	
-	public static void logout() {
+	public void logout() throws SQLException {
 		Main.current_user=null;
 		Main.control=-1;
+		conn.close();
 	}
 	
 	//--------------------------------------------------------------------------------------------------------------
 	
-	private static ArrayList<TrainQuery> getTrainQueryResult(String start, String arrive) throws SQLException {
+	private ArrayList<TrainQuery> getTrainQueryResult(String start, String arrive) throws SQLException {
 		String sql=
 				"select t1.train_num    as tn," + 
 				"       t1.station_name as from," + 
@@ -190,7 +190,7 @@ public class User {
 	}
 	
 	public static ArrayList<String> getDates() throws SQLException {
-		PreparedStatement selectDate=conn.prepareStatement("select distinct date from rest_seat");
+		PreparedStatement selectDate=sconn.prepareStatement("select distinct date from rest_seat");
 		ResultSet dateResult=selectDate.executeQuery();
 		ArrayList<String> dates=new ArrayList<>();
 		while (dateResult.next()) 
@@ -203,7 +203,7 @@ public class User {
 	
 	public static ArrayList<String> getSeats() throws SQLException {
 		ArrayList<String> seats=new ArrayList<>();
-		ResultSet seattypes=conn.prepareStatement("select type_name as tn from seat_type;").executeQuery();
+		ResultSet seattypes=sconn.prepareStatement("select type_name as tn from seat_type;").executeQuery();
 		while (seattypes.next())
 			seats.add(seattypes.getString("tn"));
 		seattypes.close();
@@ -331,32 +331,43 @@ public class User {
 						+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
 				PreparedStatement stmt=conn.prepareStatement(sql);
 				
-				boolean idcontrol=true;
-				while (idcontrol) {
-					System.out.print("请输入身份证号: ");
-					String pid=scan.next();
-					
-					conn.prepareStatement("begin;").execute();
-					
-					stmt.setString(1, this.name);
-					stmt.setString(2, pid);
-					stmt.setString(3, tq.getTrain_num());
-					stmt.setString(4, tq.getDepart_station());
-					stmt.setString(5, tq.getArrive_station());
-					stmt.setDouble(6, seat_price.get(seatnum-1));
-					stmt.setString(7, dates.get(datenum-1));
-					stmt.setInt(8, seatnum);
-					stmt.setString(9, tq.getDepart_time());
-					stmt.setString(10, tq.getArrive_time());
-					stmt.setInt(11, tq.getDateChange());
-					try {
-						stmt.execute();
-						idcontrol=false;
-					} catch (SQLException e) {
-						System.out.println("身份证号无效");
-						conn.prepareStatement("rollback;").execute();
-						idcontrol=true;
-					}
+				boolean idcontrol=false;
+				System.out.print("请输入身份证号: ");
+				String pid=scan.next();
+				PreparedStatement checkID=conn.prepareStatement("select valid_check(?) as vc;");
+				ResultSet checkidresult=null;
+				checkID.setString(1, pid);
+				checkidresult=checkID.executeQuery();
+				while (checkidresult.next())
+					idcontrol=checkidresult.getBoolean("vc");
+				while (!idcontrol) {
+					System.out.print("身份证号错误，请重新输入: ");
+					pid=scan.next();
+					checkID.setString(1, pid);
+					checkidresult=checkID.executeQuery();
+					while (checkidresult.next())
+						idcontrol=checkidresult.getBoolean("vc");
+				}
+				
+				conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
+				
+				stmt.setString(1, this.name);
+				stmt.setString(2, pid);
+				stmt.setString(3, tq.getTrain_num());
+				stmt.setString(4, tq.getDepart_station());
+				stmt.setString(5, tq.getArrive_station());
+				stmt.setDouble(6, seat_price.get(seatnum-1));
+				stmt.setString(7, dates.get(datenum-1));
+				stmt.setInt(8, seatnum);
+				stmt.setString(9, tq.getDepart_time());
+				stmt.setString(10, tq.getArrive_time());
+				stmt.setInt(11, tq.getDateChange());
+				try {
+					stmt.execute();
+				} catch (SQLException e) {
+					System.out.println("订票失败，请检查时间冲突！");
+					conn.prepareStatement("rollback;").execute();
+					return;
 				}
 				
 				sql="select subtract_seat(cast(? as date), ?, ?, ?, ?);";
@@ -459,7 +470,7 @@ public class User {
 		}
 		OrderQuery oq=orders.get(num-1);
 		
-		conn.prepareStatement("begin;").execute();
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		
 		String sql="delete from orders where order_id=?;";
 		PreparedStatement stmt=conn.prepareStatement(sql);
@@ -548,7 +559,7 @@ public class User {
 			type=scan.next();
 		}
 		
-		conn.prepareStatement("begin;").execute();
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		
 		String sql="insert into train (train_num, train_type) values (?, ?)";
 		PreparedStatement stmt=conn.prepareStatement(sql);
@@ -691,7 +702,7 @@ public class User {
 		}
 		rs.close();
 		
-		conn.prepareStatement("begin;").execute();
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		
 		String sql="delete from rest_seat where price_id in (select price_id from price where schedule_id in (select schedule_id from inquire_table where train_num=?));";
 		PreparedStatement stmt=conn.prepareStatement(sql);
@@ -776,7 +787,7 @@ public class User {
 			pos=scan.nextInt();
 		}
 		
-		conn.prepareStatement("begin;").execute();
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		PreparedStatement updateotherstation=conn.prepareStatement("update schedule set stop_num=stop_num+1 "
 				+ "where train_id=(select train_id from train where train_num=?) and stop_num between ? and (select max(stop_num) from inquire_table where train_num=?);");
 		updateotherstation.setString(1, tn);
@@ -935,7 +946,7 @@ public class User {
 			pos=scan.nextInt();
 		}
 		
-		conn.prepareStatement("begin;").execute();
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
 		
 		sql="delete from rest_seat where price_id in (select price_id from price where schedule_id=(select schedule_id from inquire_table where train_num=? and stop_num=?));";
 		stmt=conn.prepareStatement(sql);
@@ -1011,59 +1022,74 @@ public class User {
 				+ "values (?, ?, ?, ?, ?, ?, cast(? as date), ?, ?, ?, ?);";
 		PreparedStatement stmt=conn.prepareStatement(sql);
 		
-		boolean idctrl=true;
-		while (idctrl) {
-			System.out.print("请输入身份证号: ");
-			String pid=scan.next();
-			
-			conn.prepareStatement("begin;").execute();
-			
-			stmt.setString(1, this.name);
-			stmt.setString(2, pid);
-			
-			stmt.setString(3, pq.first_train_num);
-			stmt.setString(4, pq.first_from_name);
-			stmt.setString(5, pq.first_to_name);
-			if (seatnum1==1)
-				stmt.setDouble(6, pq.first_price1);
-			else if (seatnum1==2)
-				stmt.setDouble(6, pq.first_price2);
-			else if (seatnum1==3)
-				stmt.setDouble(6, pq.first_price3);
-			else if (seatnum1==4)
-				stmt.setDouble(6, pq.first_price4);
+		boolean idcontrol=false;
+		System.out.print("请输入身份证号: ");
+		String pid=scan.next();
+		PreparedStatement checkID=conn.prepareStatement("select valid_check(?) as vc;");
+		ResultSet checkidresult=null;
+		checkID.setString(1, pid);
+		checkidresult=checkID.executeQuery();
+		while (checkidresult.next())
+			idcontrol=checkidresult.getBoolean("vc");
+		while (!idcontrol) {
+			System.out.print("身份证号错误，请重新输入: ");
+			pid=scan.next();
+			checkID.setString(1, pid);
+			checkidresult=checkID.executeQuery();
+			while (checkidresult.next())
+				idcontrol=checkidresult.getBoolean("vc");
+		}
+		
+		conn.prepareStatement("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;").execute();
+		
+		stmt.setString(1, this.name);
+		stmt.setString(2, pid);
+		
+		stmt.setString(3, pq.first_train_num);
+		stmt.setString(4, pq.first_from_name);
+		stmt.setString(5, pq.first_to_name);
+		if (seatnum1==1)
+			stmt.setDouble(6, pq.first_price1);
+		else if (seatnum1==2)
+			stmt.setDouble(6, pq.first_price2);
+		else if (seatnum1==3)
+			stmt.setDouble(6, pq.first_price3);
+		else if (seatnum1==4)
+			stmt.setDouble(6, pq.first_price4);
+		stmt.setString(7, pq.date);
+		stmt.setInt(8, seatnum1);
+		stmt.setString(9, pq.first_depart);
+		stmt.setString(10, pq.first_arrive);
+		stmt.setInt(11, pq.datechange1);
+		try {
+			stmt.execute();
+		} catch (SQLException e) {
+			System.out.println("订票失败，请检查时间冲突！");
+			conn.prepareStatement("rollback;").execute();
+		}
+		
+		if (pq.second_from_stop!=0) {
+			stmt.setString(3, pq.second_train_num);
+			stmt.setString(4, pq.first_to_name);
+			stmt.setString(5, pq.second_to_name);
+			if (seatnum2==1)
+				stmt.setDouble(6, pq.second_price1);
+			else if (seatnum2==2)
+				stmt.setDouble(6, pq.second_price2);
+			else if (seatnum2==3)
+				stmt.setDouble(6, pq.second_price3);
+			else if (seatnum2==4)
+				stmt.setDouble(6, pq.second_price4);
 			stmt.setString(7, pq.date);
-			stmt.setInt(8, seatnum1);
-			stmt.setString(9, pq.first_depart);
-			stmt.setString(10, pq.first_arrive);
-			stmt.setInt(11, pq.datechange1);
+			stmt.setInt(8, seatnum2);
+			stmt.setString(9, pq.second_depart);
+			stmt.setString(10, pq.second_arrive);
+			stmt.setInt(11, pq.datechange2);
 			try {
 				stmt.execute();
-				idctrl=false;
 			} catch (SQLException e) {
-				System.out.println("身份证号无效");
+				System.out.println("订票失败，请检查时间冲突！");
 				conn.prepareStatement("rollback;").execute();
-				idctrl=true;
-			}
-			
-			if (pq.second_from_stop!=0) {
-				stmt.setString(3, pq.second_train_num);
-				stmt.setString(4, pq.first_to_name);
-				stmt.setString(5, pq.second_to_name);
-				if (seatnum2==1)
-					stmt.setDouble(6, pq.second_price1);
-				else if (seatnum2==2)
-					stmt.setDouble(6, pq.second_price2);
-				else if (seatnum2==3)
-					stmt.setDouble(6, pq.second_price3);
-				else if (seatnum2==4)
-					stmt.setDouble(6, pq.second_price4);
-				stmt.setString(7, pq.date);
-				stmt.setInt(8, seatnum2);
-				stmt.setString(9, pq.second_depart);
-				stmt.setString(10, pq.second_arrive);
-				stmt.setInt(11, pq.datechange2);
-				stmt.execute();
 			}
 		}
 		

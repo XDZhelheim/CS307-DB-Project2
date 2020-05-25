@@ -13,7 +13,8 @@ Anything outside the "proxool" tag is ignored. -->
             <property name="password" value="201205"/>
         </driver-properties>
         <minimum-connection-count>5</minimum-connection-count>
-        <maximum-connection-count>200</maximum-connection-count>
+        <maximum-connection-count>1200</maximum-connection-count>
+        <simultaneous-build-throttle>1200</simultaneous-build-throttle>
 
     </proxool>
 </something-else-entirely>
